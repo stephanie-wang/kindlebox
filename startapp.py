@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
-"""
-An example of Dropbox App linking with Flask.
-"""
 
 import os
 import posixpath
-
+import constants
+import database
 from sqlite3 import dbapi2 as sqlite3
 from flask import Flask, request, session, g, redirect, url_for, abort, \
      render_template, flash, _app_ctx_stack
@@ -18,8 +16,8 @@ DATABASE = 'myapp.db'
 SECRET_KEY = 'development key'
 
 # Fill these in!
-DROPBOX_APP_KEY = 'pbxn93iu6zgnjph'
-DROPBOX_APP_SECRET = 'n12nugx1no97a3f'
+DROPBOX_APP_KEY = constants.DROPBOX_APP_KEY
+DROPBOX_APP_SECRET = constants.DROPBOX_APP_SECRET
 
 # create our little application :)
 app = Flask(__name__)
@@ -32,79 +30,17 @@ try:
 except OSError:
     pass
 
+db = None
+
 def init_db():
     """Creates the database tables."""
     with app.app_context():
-        db = get_db()
+        global db
+        db = database.Database(app)
+        storage = db.get_db()
         with app.open_resource("schema.sql", mode="r") as f:
-            db.cursor().executescript(f.read())
-        db.commit()
-
-
-def get_db():
-    """
-    Opens a new database connection if there is none yet for the current application context.
-    """
-    top = _app_ctx_stack.top
-    if not hasattr(top, 'sqlite_db'):
-        sqlite_db = sqlite3.connect(os.path.join(app.instance_path, app.config['DATABASE']))
-        sqlite_db.row_factory = sqlite3.Row
-        top.sqlite_db = sqlite_db
-
-    return top.sqlite_db
-
-def get_access_token():
-    username = session.get('user')
-    if username is None:
-        return None
-    db = get_db()
-    row = db.execute('SELECT access_token FROM users WHERE username = ?', [username]).fetchone()
-    if row is None:
-        return None
-    return row[0]
-
-def get_folder():
-    username = session.get('user')
-    if username is None:
-        return None
-    db = get_db()
-    row = db.execute('SELECT folder FROM users WHERE username = ?', [username]).fetchone()
-    if row is None:
-        return None
-    return row[0]
-
-def get_books():
-    username = session.get('user')
-    if username is None:
-        return None
-    db = get_db()
-    user_id = db.execute('SELECT id FROM users WHERE username = ?', [username]).fetchone()
-    if user_id is None:
-        return None
-    user_id = user_id[0]
-    books = db.execute('SELECT pathname FROM users WHERE id = ?', [user_id])
-    return books
-
-def get_books_from_dropbox(client):
-    metadata = client.metadata(get_folder())
-    return [f['path'] for f in metadata['contents']]
-
-def set_books(pathnameMappings):
-    username = session.get('user')
-    if username is None:
-        return None
-    db = get_db()
-    user_id = db.execute('SELECT id FROM users WHERE username = ?', [username]).fetchone()
-    if user_id is None:
-        return None
-    user_id = user_id[0]
-    for mapping in pathnameMappings:
-        if db.execute('SELECT * FROM books WHERE book_id = ?', [mapping['book_id']]) == None:
-            db.execute('UPDATE books SET pathname = ? WHERE book_id = ?', [mapping['pathname'], mapping['book_id']])
-        else:
-            db.execute('INSERT INTO books (id, pathname) VALUES(?, ?)', [user_id, mapping['pathname']])
-    db.commit()
-
+            storage.cursor().executescript(f.read())
+        storage.commit()
 
 @app.route('/')
 def home():
@@ -117,8 +53,16 @@ def home():
         client = DropboxClient(access_token)
         account_info = client.account_info()
         real_name = account_info["display_name"]
-        return render_template('index.html', real_name=get_books_from_dropbox(client))
+        print db.get_books_from_dropbox(client)
+        return render_template('index.html', real_name=db.get_books_from_dropbox(client))
     return render_template('index.html', real_name=real_name)
+
+
+def get_access_token():
+    username = session.get('user')
+    if username is None:
+        return None
+    return db.readRow('SELECT access_token FROM users WHERE username = ?', [username])
 
 @app.route('/dropbox-auth-finish')
 def dropbox_auth_finish():
@@ -139,10 +83,8 @@ def dropbox_auth_finish():
     except DropboxOAuth2Flow.ProviderException, e:
         app.logger.exception("Auth error" + e)
         abort(403)
-    db = get_db()
     data = [access_token, username]
-    db.execute('UPDATE users SET access_token = ? WHERE username = ?', data)
-    db.commit()
+    db.write('UPDATE users SET access_token = ? WHERE username = ?', data)
     return redirect(url_for('home'))
 
 @app.route('/dropbox-auth-start')
@@ -156,9 +98,8 @@ def dropbox_unlink():
     username = session.get('user')
     if username is None:
         abort(403)
-    db = get_db()
-    db.execute('UPDATE users SET access_token = NULL, folder = NULL WHERE username = ?', [username])
-    db.commit()
+    db.write('UPDATE users SET access_token = NULL, folder = NULL, \
+        email_address = NULL, active = 0 WHERE username = ?', [username])
     return redirect(url_for('home'))
 
 def get_auth_flow():
@@ -173,11 +114,12 @@ def login():
         username = request.form['username']
         folder = request.form['folder']
         if username:
-            db = get_db()
-            db.execute('INSERT OR IGNORE INTO users (username) VALUES (?)', [username])
+            storage = db.get_db()
+            storage.execute('INSERT OR IGNORE INTO users (username, email_address, active) \
+                VALUES (?, ?, ?)', [username, username, 0])
             if folder:
-                db.execute('UPDATE users SET folder = ? WHERE username = ?', [folder, username])
-            db.commit()
+                storage.execute('UPDATE users SET folder = ? WHERE username = ?', [folder, username])
+            storage.commit()
             session['user'] = username
             flash('You were logged in')
             return redirect(url_for('home'))
@@ -195,7 +137,6 @@ def logout():
 def main():
     init_db()
     app.run()
-
 
 if __name__ == '__main__':
     main()
