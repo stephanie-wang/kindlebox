@@ -1,0 +1,9 @@
+{% extends "layout.html" %}
+{% block body %}
+  {% if real_name %}
+    <p>Welcome {{ real_name }}!
+    <p><a href="{{ url_for('dropbox_unlink') }} " method="post">Unlink</a>
+  {% else %}
+    <a href="{{ url_for('dropbox_auth_start') }}">Link</a>
+  {% endif %}  
+{% endblock %}
