@@ -42,27 +42,31 @@ def init_db():
             storage.cursor().executescript(f.read())
         storage.commit()
 
-@app.route('/')
+@app.route('/', methods = ['GET', 'POST'])
 def home():
     if 'user' not in session:
         return redirect(url_for('login'))
-    access_token = get_access_token()
+
     real_name = None
+    access_token = get_access_token()
     print(access_token)
-    if access_token is not None:
-        client = DropboxClient(access_token)
-        account_info = client.account_info()
-        real_name = account_info["display_name"]
-        print db.get_books_from_dropbox(client)
-        return render_template('index.html', real_name=db.get_books_from_dropbox(client))
-    return render_template('index.html', real_name=real_name)
+    folder = get_folder()
+    print(folder)
 
+    #user not active
+    if access_token is None:
+        return render_template('index.html', real_name=real_name, folder = folder)
 
-def get_access_token():
-    username = session.get('user')
-    if username is None:
-        return None
-    return db.readRow('SELECT access_token FROM users WHERE username = ?', [username])
+    client = DropboxClient(access_token)
+    account_info = client.account_info()
+    real_name = account_info['display_name']
+
+    if folder:
+        contents = get_books_from_folder(client, folder)
+        return render_template('index.html', real_name="You are logged in as " + real_name, folder = folder,
+            folder_contents = contents)
+
+    return render_template('index.html', real_name="You are logged in as " + real_name, folder = folder)
 
 @app.route('/dropbox-auth-finish')
 def dropbox_auth_finish():
@@ -84,7 +88,7 @@ def dropbox_auth_finish():
         app.logger.exception("Auth error" + e)
         abort(403)
     data = [access_token, username]
-    db.write('UPDATE users SET access_token = ? WHERE username = ?', data)
+    db.write('UPDATE users SET active = 1, access_token = ? WHERE kindle_name = ?', data)
     return redirect(url_for('home'))
 
 @app.route('/dropbox-auth-start')
@@ -99,7 +103,7 @@ def dropbox_unlink():
     if username is None:
         abort(403)
     db.write('UPDATE users SET access_token = NULL, folder = NULL, \
-        email_address = NULL, active = 0 WHERE username = ?', [username])
+        email_address = NULL, active = 0 WHERE kindle_name = ?', [username])
     return redirect(url_for('home'))
 
 def get_auth_flow():
@@ -111,20 +115,16 @@ def get_auth_flow():
 def login():
     error = None
     if request.method == 'POST':
-        username = request.form['username']
-        folder = request.form['folder']
-        if username:
-            storage = db.get_db()
-            storage.execute('INSERT OR IGNORE INTO users (username, email_address, active) \
-                VALUES (?, ?, ?)', [username, username, 0])
-            if folder:
-                storage.execute('UPDATE users SET folder = ? WHERE username = ?', [folder, username])
-            storage.commit()
-            session['user'] = username
-            flash('You were logged in')
-            return redirect(url_for('home'))
-        else:
-            flash("You must provide a username")
+        kindlename = request.form['kindlename']
+        if kindlename:
+            session['user'] = kindlename
+            active = db.readRow('SELECT active FROM users WHERE kindle_name = ?', [kindlename])
+            if active == 0 or active == None:
+                db.write('INSERT OR IGNORE INTO users (kindle_name, active) \
+                    VALUES (?)', [kindlename])
+                return redirect(url_for('dropbox_auth_start'))
+            else:
+                return redirect(url_for('home'))
     return render_template('login.html', error=error)
 
 @app.route('/logout')
@@ -132,6 +132,44 @@ def logout():
     session.pop('user', None)
     flash('You were logged out')
     return redirect(url_for('home'))
+
+
+def set_active():
+    username = session.get('user')
+    if username is None:
+        return None
+    return db.write('UPDATE users SET active = 1 WHERE kindle_name = ?', [username])
+
+def get_access_token():
+    username = session.get('user')
+    if username is None:
+        return None
+    return db.readRow('SELECT access_token FROM users WHERE kindle_name = ?', [username])
+
+def get_folder():
+    username = session.get('user')
+    if username is None:
+        return None
+    if request.method == 'POST':
+        folder = request.form['folder']
+        set_folder(folder)
+    return db.readRow('SELECT folder FROM users WHERE kindle_name = ?', [username])
+
+def set_folder(folder):
+    username = session.get('user')
+    if username is None:
+        return None
+    db.write('UPDATE users SET folder = ? WHERE kindle_name = ?', [folder, username])
+
+def get_books_from_folder(client, folder):
+    metadata = client.metadata(folder)
+    books = []
+    for f in metadata['contents']:
+        if f['is_dir']:
+            books += get_books_from_folder(client, f['path'])
+        else:
+            books.append(f['path'])
+    return books
 
 
 def main():

@@ -44,7 +44,7 @@ class Database:
 	    if username is None:
 	        return None
 	    db = self.get_db()
-	    row = db.execute('SELECT folder FROM users WHERE username = ?', [username]).fetchone()
+	    row = db.execute('SELECT folder FROM users WHERE kindle_name = ?', [username]).fetchone()
 	    if row is None:
 	        return None
 	    return row[0]
@@ -54,23 +54,19 @@ class Database:
 	    if username is None:
 	        return None
 	    db = self.get_db()
-	    user_id = db.execute('SELECT id FROM users WHERE username = ?', [username]).fetchone()
+	    user_id = db.execute('SELECT id FROM users WHERE kindle_name = ?', [username]).fetchone()
 	    if user_id is None:
 	        return None
 	    user_id = user_id[0]
-	    books = db.execute('SELECT pathname FROM users WHERE id = ?', [user_id])
-	    return books
-
-	def get_books_from_dropbox(self, client):
-	    metadata = client.metadata(self.get_folder())
-	    return [f['path'] for f in metadata['contents']]
+	    book_ids = db.execute('SELECT book_id FROM booksbyuser WHERE id = ?', [user_id])
+	    return book_ids
 
 	def set_books(self, pathnameMappings):
 	    username = session.get('user')
 	    if username is None:
 	        return None
 	    db = self.get_db()
-	    user_id = db.execute('SELECT id FROM users WHERE username = ?', [username]).fetchone()
+	    user_id = db.execute('SELECT id FROM users WHERE kindle_name = ?', [username]).fetchone()
 	    if user_id is None:
 	        return None
 	    user_id = user_id[0]

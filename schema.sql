@@ -1,18 +1,20 @@
-DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS books;
-
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  username TEXT UNIQUE NOT NULL,
+  kindle_name TEXT UNIQUE NOT NULL,
   access_token BLOB,
   folder TEXT,
-  email_address TEXT,
+  emailer TEXT,
   active TINYINT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS books (
     id INTEGER,
     book_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    book_contents INTEGER NOT NULL,
+    book_contents INTEGER,
     pathname TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS booksbyuser (
+	id INTEGER PRIMARY KEY,
+	book_id INTEGER
 );

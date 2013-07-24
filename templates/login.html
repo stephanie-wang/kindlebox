@@ -4,10 +4,8 @@
   {% if error %}<p class=error><strong>Error:</strong> {{ error }}{% endif %}
   <form action="{{ url_for('login') }}" method=post>
     <dl>
-      <dt>Username:
-      <dd><input type=text name=username>
-      <dt>Folder:
-      <dd><input type=text name=folder>
+      <dt>Kindle Username:
+      <dd><input type=text name=kindlename>
       <dd><input type=submit value=Login>
     </dl>
   </form>

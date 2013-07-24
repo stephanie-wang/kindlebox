@@ -2,6 +2,13 @@
 {% block body %}
   {% if real_name %}
     <p>Welcome {{ real_name }}!
+  	<form action="{{ url_for('home') }}" method=post>
+    	Folder: <input type=text name=folder value="{{ folder }}">
+	    <input type=submit value=Login>
+    </form>
+    {% if folder_contents %}
+    	{{ folder_contents }}
+    {% endif %}
     <p><a href="{{ url_for('dropbox_unlink') }} " method="post">Unlink</a>
   {% else %}
     <a href="{{ url_for('dropbox_auth_start') }}">Link</a>
