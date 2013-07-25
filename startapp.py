@@ -42,31 +42,28 @@ def init_db():
             storage.cursor().executescript(f.read())
         storage.commit()
 
-@app.route('/', methods = ['GET', 'POST'])
+@app.route('/')
 def home():
     if 'user' not in session:
+        print 'not logged in'
         return redirect(url_for('login'))
 
     real_name = None
     access_token = get_access_token()
-    print(access_token)
-    folder = get_folder()
-    print(folder)
+    print "access token is ", access_token
 
     #user not active
     if access_token is None:
-        return render_template('index.html', real_name=real_name, folder = folder)
+        return render_template('index.html', real_name=real_name)
 
     client = DropboxClient(access_token)
     account_info = client.account_info()
     real_name = account_info['display_name']
 
-    if folder:
-        contents = get_books_from_folder(client, folder)
-        return render_template('index.html', real_name="You are logged in as " + real_name, folder = folder,
-            folder_contents = contents)
+    contents = get_books_from_folder(client, '/')
+    return render_template('index.html', real_name="You are logged in as " + real_name,
+        folder_contents = contents)
 
-    return render_template('index.html', real_name="You are logged in as " + real_name, folder = folder)
 
 @app.route('/dropbox-auth-finish')
 def dropbox_auth_finish():
@@ -75,6 +72,7 @@ def dropbox_auth_finish():
         abort(403)
     try:
         access_token, user_id, url_state = get_auth_flow().finish(request.args)
+        print "access token is ", access_token
     except DropboxOAuth2Flow.BadRequestException, e:
         abort(400)
     except DropboxOAuth2Flow.BadStateException, e:
@@ -88,6 +86,7 @@ def dropbox_auth_finish():
         app.logger.exception("Auth error" + e)
         abort(403)
     data = [access_token, username]
+    print "database is ", db
     db.write('UPDATE users SET active = 1, access_token = ? WHERE kindle_name = ?', data)
     return redirect(url_for('home'))
 
@@ -102,7 +101,7 @@ def dropbox_unlink():
     username = session.get('user')
     if username is None:
         abort(403)
-    db.write('UPDATE users SET access_token = NULL, folder = NULL, \
+    db.write('UPDATE users SET access_token = NULL, \
         email_address = NULL, active = 0 WHERE kindle_name = ?', [username])
     return redirect(url_for('home'))
 
@@ -121,7 +120,7 @@ def login():
             active = db.readRow('SELECT active FROM users WHERE kindle_name = ?', [kindlename])
             if active == 0 or active == None:
                 db.write('INSERT OR IGNORE INTO users (kindle_name, active) \
-                    VALUES (?)', [kindlename])
+                    VALUES (?, 0)', [kindlename])
                 return redirect(url_for('dropbox_auth_start'))
             else:
                 return redirect(url_for('home'))
@@ -146,21 +145,6 @@ def get_access_token():
         return None
     return db.readRow('SELECT access_token FROM users WHERE kindle_name = ?', [username])
 
-def get_folder():
-    username = session.get('user')
-    if username is None:
-        return None
-    if request.method == 'POST':
-        folder = request.form['folder']
-        set_folder(folder)
-    return db.readRow('SELECT folder FROM users WHERE kindle_name = ?', [username])
-
-def set_folder(folder):
-    username = session.get('user')
-    if username is None:
-        return None
-    db.write('UPDATE users SET folder = ? WHERE kindle_name = ?', [folder, username])
-
 def get_books_from_folder(client, folder):
     metadata = client.metadata(folder)
     books = []
@@ -171,6 +155,19 @@ def get_books_from_folder(client, folder):
             books.append(f['path'])
     return books
 
+def get_delta(client):
+    username = session.get('user')
+    if username is None:
+        return None
+    cursor = db.readRow('SELECT delta_cursor FROM users WHERE kindle_name = ?', [username])
+    if cursor == None:
+        return None
+    delta = client.delta(cursor)
+    db.write('UPDATE users SET delta_cursor = ? WHERE kindle_name = ?', [delta['cursor'], username])
+    booksToSave = filter(lambda entry: entry[1] != None, delta['entries'])
+    bookMappings = [ { 'pathname' : book[0], 
+                'hash' : hash(book[1]['size']) } for book in booksToSave]
+    db.save_books(username, bookMappings)
 
 def main():
     init_db()

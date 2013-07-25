@@ -2,9 +2,9 @@ CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   kindle_name TEXT UNIQUE NOT NULL,
   access_token BLOB,
-  folder TEXT,
   emailer TEXT,
-  active TINYINT NOT NULL
+  active TINYINT NOT NULL,
+  delta_cursor TEXT
 );
 
 CREATE TABLE IF NOT EXISTS books (

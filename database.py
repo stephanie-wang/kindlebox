@@ -29,6 +29,7 @@ class Database:
 
 	def write(self, command, data):
 		db = self.get_db()
+		print 'WRITING', command
 		db.execute(command, data)
 		db.commit()
 
@@ -38,16 +39,6 @@ class Database:
 		if row is None:
 			return None
 		return row[0]
-
-	def get_folder(self):
-	    username = session.get('user')
-	    if username is None:
-	        return None
-	    db = self.get_db()
-	    row = db.execute('SELECT folder FROM users WHERE kindle_name = ?', [username]).fetchone()
-	    if row is None:
-	        return None
-	    return row[0]
 
 	def get_books_from_db(self):
 	    username = session.get('user')
@@ -61,10 +52,7 @@ class Database:
 	    book_ids = db.execute('SELECT book_id FROM booksbyuser WHERE id = ?', [user_id])
 	    return book_ids
 
-	def set_books(self, pathnameMappings):
-	    username = session.get('user')
-	    if username is None:
-	        return None
+	def set_books(self, username, pathnameMappings):
 	    db = self.get_db()
 	    user_id = db.execute('SELECT id FROM users WHERE kindle_name = ?', [username]).fetchone()
 	    if user_id is None:
