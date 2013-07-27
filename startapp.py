@@ -4,6 +4,7 @@ import os
 import posixpath
 import constants
 import database
+import hashlib
 from sqlite3 import dbapi2 as sqlite3
 from flask import Flask, request, session, g, redirect, url_for, abort, \
      render_template, flash, _app_ctx_stack
@@ -52,7 +53,7 @@ def home():
     access_token = get_access_token()
     print "access token is ", access_token
 
-    #user not active
+    #user not authorized
     if access_token is None:
         return render_template('index.html', real_name=real_name)
 
@@ -164,10 +165,35 @@ def get_delta(client):
         return None
     delta = client.delta(cursor)
     db.write('UPDATE users SET delta_cursor = ? WHERE kindle_name = ?', [delta['cursor'], username])
-    booksToSave = filter(lambda entry: entry[1] != None, delta['entries'])
-    bookMappings = [ { 'pathname' : book[0], 
-                'hash' : hash(book[1]['size']) } for book in booksToSave]
-    db.save_books(username, bookMappings)
+    booksToSave = filter(lambda entry: (not entry[1]['is_dir']) if entry[1] != None else False, 
+        delta['entries'])
+    books = [ book[0] for book in booksToSave ]
+    cur_books = db.get_books_from_db(username)
+    books = filter(lambda book: book not in cur_books, books)
+    # TODO: check books for file renames
+    book_ids = db.save_books(username, books)
+    hashes = download_and_email_books(client, books)
+    #TODO: what happens if emailing fails midway through hashes? must not save all to database
+    db.save_book_hashes(book_ids, hashes)
+
+def download_and_email_books(client, books):
+    hashes = []
+    md5 = hashlib.md5()
+    for book in books:
+        tmpPath = constants.LOCAL_FOLDER + book.split('/')[-1]
+        tmpBook = open(tmpPath, 'a')
+        f = client.get_file(book)
+        while True:
+            data = f.read(128)
+            if not data:
+                break
+            tmpBook.write(data)
+            md5.update(data)
+        hashes.append(md5.digest())
+        #TODO: send email with attachment here
+        tmpBook.close()
+        os.remove(tmpPath)
+    return hashes
 
 def main():
     init_db()

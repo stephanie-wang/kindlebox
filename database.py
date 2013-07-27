@@ -40,27 +40,41 @@ class Database:
 			return None
 		return row[0]
 
-	def get_books_from_db(self):
-	    username = session.get('user')
-	    if username is None:
-	        return None
+	def get_books_from_db(self, username):
 	    db = self.get_db()
 	    user_id = db.execute('SELECT id FROM users WHERE kindle_name = ?', [username]).fetchone()
 	    if user_id is None:
-	        return None
-	    user_id = user_id[0]
-	    book_ids = db.execute('SELECT book_id FROM booksbyuser WHERE id = ?', [user_id])
-	    return book_ids
+	        return []
+	    books = db.execute('''SELECT pathname FROM books WHERE book_id in 
+	    	(SELECT book_id FROM booksbyuser WHERE id = ?)''', user_id).fetchmany()
+	    return books
 
-	def set_books(self, username, pathnameMappings):
+	def save_books(self, username, book_mappings):
+		""" this only enters new books in. no hashes are saved.
+		Returns book_id of each book saved """
+
 	    db = self.get_db()
 	    user_id = db.execute('SELECT id FROM users WHERE kindle_name = ?', [username]).fetchone()
 	    if user_id is None:
 	        return None
 	    user_id = user_id[0]
-	    for mapping in pathnameMappings:
-	        if db.execute('SELECT * FROM books WHERE book_id = ?', [mapping['book_id']]) == None:
-	            db.execute('UPDATE books SET pathname = ? WHERE book_id = ?', [mapping['pathname'], mapping['book_id']])
-	        else:
-	            db.execute('INSERT INTO books (id, pathname) VALUES(?, ?)', [user_id, mapping['pathname']])
+	    book_ids = []
+	    # TODO: replace this later with executemany
+	    for book_mapping in book_mappings:
+	    	result = db.execute('INSERT INTO books (id, pathname, book_contents) VALUES (?, ?, ?)', 
+	    		[user_id, book_mappings[0]])
+	    	book_ids.append(result.lastrowid)
+	  		db.execute('INSERT INTO booksbyuser (id, book_id) VALUES (?, ?)', [user_id, result.lastrowid])
 	    db.commit()
+
+	def save_book_hashes(self, book_ids, hashes):
+		db = self.get_db()
+		# TODO: replace this later with executemany
+		for i in range(len(book_ids)):
+			db.execute('UPDATE books SET book_contents = ? VALUES WHERE book_id = ?', [hashes[i], book_ids[i]])
+		db.commit()
+
+
+	def check_file_rename(self):
+		# TODO: check if file was renamed
+		return None
