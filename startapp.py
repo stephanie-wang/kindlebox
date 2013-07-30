@@ -61,7 +61,7 @@ def home():
     account_info = client.account_info()
     real_name = account_info['display_name']
 
-    contents = get_books_from_folder(client, '/')
+    contents = get_delta(client)
     return render_template('index.html', real_name="You are logged in as " + real_name,
         folder_contents = contents)
 
@@ -73,7 +73,6 @@ def dropbox_auth_finish():
         abort(403)
     try:
         access_token, user_id, url_state = get_auth_flow().finish(request.args)
-        print "access token is ", access_token
     except DropboxOAuth2Flow.BadRequestException, e:
         abort(400)
     except DropboxOAuth2Flow.BadStateException, e:
@@ -87,7 +86,6 @@ def dropbox_auth_finish():
         app.logger.exception("Auth error" + e)
         abort(403)
     data = [access_token, username]
-    print "database is ", db
     db.write('UPDATE users SET active = 1, access_token = ? WHERE kindle_name = ?', data)
     return redirect(url_for('home'))
 
@@ -146,16 +144,6 @@ def get_access_token():
         return None
     return db.readRow('SELECT access_token FROM users WHERE kindle_name = ?', [username])
 
-def get_books_from_folder(client, folder):
-    metadata = client.metadata(folder)
-    books = []
-    for f in metadata['contents']:
-        if f['is_dir']:
-            books += get_books_from_folder(client, f['path'])
-        else:
-            books.append(f['path'])
-    return books
-
 def get_delta(client):
     username = session.get('user')
     if username is None:
@@ -173,8 +161,10 @@ def get_delta(client):
     # TODO: check books for file renames
     book_ids = db.save_books(username, books)
     hashes = download_and_email_books(client, books)
-    #TODO: what happens if emailing fails midway through hashes? must not save all to database
+    #TODO: what happens if emailing fails midway through hashes? need some sort of saved flag in database
     db.save_book_hashes(book_ids, hashes)
+    #TODO: delete removed books from database
+    return books
 
 def download_and_email_books(client, books):
     hashes = []
