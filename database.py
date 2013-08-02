@@ -73,7 +73,7 @@ class Database:
 		book_ids = []
 		# TODO: replace this later with executemany
 		for book in books:
-			result = db.execute('INSERT INTO books (id, pathname) VALUES (?)', [user_id, book])
+			result = db.execute('INSERT INTO books (id, pathname) VALUES (?, ?)', [user_id, book])
 			book_ids.append(result.lastrowid)
 		db.commit()
 		return book_ids
@@ -81,9 +81,9 @@ class Database:
 	def save_book_hashes(self, book_ids, hashes):
 		db = self.get_db()
 		# TODO: replace this later with executemany
-		# TODO: catch excetion if book row not there
+		# TODO: check if book row not there
 		for i in range(len(book_ids)):
-			db.execute('UPDATE books SET book_contents = ? VALUES WHERE book_id = ?', [hashes[i], book_ids[i]])
+			db.execute('UPDATE books SET book_contents = ? WHERE book_id = ?', [hashes[i], book_ids[i]])
 		db.commit()
 
 	def delete_books(self, username, books):
@@ -92,8 +92,10 @@ class Database:
 		if user_id is None:
 			return None
 		user_id = user_id[0]
-		# TODO: finish implementing delete
-		return None
+		# TODO: replace this later with executemany
+		for book in books:
+			db.execute('DELETE FROM books WHERE user_id = ? AND pathname = ?', [user_id, book])
+		db.commit()
 
 	def check_file_rename(self):
 		# TODO: check if file was renamed

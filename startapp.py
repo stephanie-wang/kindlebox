@@ -149,22 +149,26 @@ def get_delta(client):
     if username is None:
         return None
     cursor = db.readRow('SELECT delta_cursor FROM users WHERE kindle_name = ?', [username])
-    if cursor == None:
-        return None
     delta = client.delta(cursor)
     db.write('UPDATE users SET delta_cursor = ? WHERE kindle_name = ?', [delta['cursor'], username])
     booksToSave = filter(lambda entry: (not entry[1]['is_dir']) if entry[1] != None else False, 
         delta['entries'])
-    books = [ book[0] for book in booksToSave ]
+    books_saved = [ book[0] for book in booksToSave ]
+    #also filter by current books in case last save failed
     cur_books = db.get_books_from_db(username)
-    books = filter(lambda book: book not in cur_books, books)
+    books_saved = filter(lambda book: book not in cur_books, books_saved)
     # TODO: check books for file renames
-    book_ids = db.save_books(username, books)
-    hashes = download_and_email_books(client, books)
+    book_ids = db.save_books(username, books_saved)
+    hashes = download_and_email_books(client, books_saved)
     #TODO: what happens if emailing fails midway through hashes? need some sort of saved flag in database
+    #       should probably save books one at a time in case of failure
     db.save_book_hashes(book_ids, hashes)
-    #TODO: delete removed books from database
-    return books
+    #TODO: delete removed books from database - remember to filter out changed filenames
+    booksToDelete = filter(lambda entry: (not entry[1]['is_dir']) if entry[1] == None else False, 
+        delta['entries'])
+    books_removed = [ book[0] for book in booksToDelete ]
+    db.delete_books(username, books_removed)
+    return books_saved
 
 def download_and_email_books(client, books):
     hashes = []
@@ -179,11 +183,16 @@ def download_and_email_books(client, books):
                 break
             tmpBook.write(data)
             md5.update(data)
-        hashes.append(md5.digest())
+        book_hash = md5.digest().decode("iso-8859-1")
+        print "book hash is " + book_hash
+        hashes.append(book_hash)
         #TODO: send email with attachment here
         tmpBook.close()
         os.remove(tmpPath)
     return hashes
+
+def get_random_emailer(size=25):
+    return ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(size))
 
 def main():
     init_db()
