@@ -94,9 +94,13 @@ class Database:
 		user_id = user_id[0]
 		# TODO: replace this later with executemany
 		for book in books:
-			db.execute('DELETE FROM books WHERE user_id = ? AND pathname = ?', [user_id, book])
+			db.execute('DELETE FROM books WHERE id = ? AND pathname = ?', [user_id, book])
+			print "deleted " + book
 		db.commit()
 
 	def check_file_rename(self):
 		# TODO: check if file was renamed
 		return None
+
+	def get_emailer(self, username):
+		return self.readRow('SELECT emailer FROM users kindle_name = ?', [username])

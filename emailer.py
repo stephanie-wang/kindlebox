@@ -12,8 +12,9 @@ EMAILER_PASSWORD = constants.EMAILER_PASSWORD
 KINDLE_USER = [constants.KINDLE_USER]
 
 def send_mail(send_from, send_to, subject, text, files=[], server='localhost'):
-	assert type(send_to)==list
+	assert type(send_to)!=list
 	assert type(files)==list
+	send_to = [send_to]
 
 	msg = MIMEMultipart()
 	msg['From'] = send_from

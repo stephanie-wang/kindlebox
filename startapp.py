@@ -4,6 +4,7 @@ import os
 import posixpath
 import constants
 import database
+import emailer
 import hashlib
 from sqlite3 import dbapi2 as sqlite3
 from flask import Flask, request, session, g, redirect, url_for, abort, \
@@ -85,8 +86,9 @@ def dropbox_auth_finish():
     except DropboxOAuth2Flow.ProviderException, e:
         app.logger.exception("Auth error" + e)
         abort(403)
-    data = [access_token, username]
-    db.write('UPDATE users SET active = 1, access_token = ? WHERE kindle_name = ?', data)
+    data = [access_token, username, get_random_emailer()]
+    #TODO: don't set to active until user gives emailer kindle permissions
+    db.write('UPDATE users SET active = 1, access_token = ?, emailer = ? WHERE kindle_name = ?', data)
     return redirect(url_for('home'))
 
 @app.route('/dropbox-auth-start')
@@ -150,7 +152,7 @@ def get_delta(client):
         return None
     cursor = db.readRow('SELECT delta_cursor FROM users WHERE kindle_name = ?', [username])
     delta = client.delta(cursor)
-    db.write('UPDATE users SET delta_cursor = ? WHERE kindle_name = ?', [delta['cursor'], username])
+    
     booksToSave = filter(lambda entry: (not entry[1]['is_dir']) if entry[1] != None else False, 
         delta['entries'])
     books_saved = [ book[0] for book in booksToSave ]
@@ -158,19 +160,22 @@ def get_delta(client):
     cur_books = db.get_books_from_db(username)
     books_saved = filter(lambda book: book not in cur_books, books_saved)
     # TODO: check books for file renames
+    # TODO: check books for correct file extensions
     book_ids = db.save_books(username, books_saved)
     hashes = download_and_email_books(client, books_saved)
     #TODO: what happens if emailing fails midway through hashes? need some sort of saved flag in database
     #       should probably save books one at a time in case of failure
     db.save_book_hashes(book_ids, hashes)
-    #TODO: delete removed books from database - remember to filter out changed filenames
-    booksToDelete = filter(lambda entry: (not entry[1]['is_dir']) if entry[1] == None else False, 
+    
+    booksToDelete = filter(lambda entry: entry[1] == None and len(entry[0].split('.')) > 1,
         delta['entries'])
     books_removed = [ book[0] for book in booksToDelete ]
     db.delete_books(username, books_removed)
+
+    db.write('UPDATE users SET delta_cursor = ? WHERE kindle_name = ?', [delta['cursor'], username])
     return books_saved
 
-def download_and_email_books(client, books):
+def download_and_email_books(client, username, books):
     hashes = []
     md5 = hashlib.md5()
     for book in books:
@@ -187,9 +192,16 @@ def download_and_email_books(client, books):
         print "book hash is " + book_hash
         hashes.append(book_hash)
         #TODO: send email with attachment here
+        email_book(username, tmpBook)
         tmpBook.close()
         os.remove(tmpPath)
     return hashes
+
+def email_book(username, tmpBook):
+    email_from = db.get_emailer(username)
+    email_to = username + "@kindle.com"
+    emailer.send_mail(email_from, email_to, "convert", "sending a book", [tmpBook])
+
 
 def get_random_emailer(size=25):
     return ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(size))
