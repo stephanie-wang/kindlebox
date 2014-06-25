@@ -5,6 +5,8 @@ from dropbox.client import DropboxOAuth2Flow
 from flask import Flask, request, session, redirect, url_for, abort, \
     render_template, flash
 from flask.ext.sqlalchemy import SQLAlchemy
+import hashlib
+import hmac
 import os
 
 import constants
@@ -148,7 +150,8 @@ def verify():
         return request.args.get('challenge') 
     # TODO(sxwang): check this
     signature = request.headers.get('X-Dropbox-Signature')
-    if signature != hmac.new(DROPBOX_APP_SECRET, request.data, sha256).hexdigest():
+    if signature != hmac.new(DROPBOX_APP_SECRET, request.data,
+            hashlib.sha256).hexdigest():
         abort(403)
 
     for user_id in json.loads(request.data)['delta']['users']:
