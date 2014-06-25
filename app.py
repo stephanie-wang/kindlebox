@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-# TODO: Make a link to get a new emailer.
-# TODO: Allow reset of email address
-# TODO: switch to postgres :(
 
 import binascii
 from dropbox.client import DropboxOAuth2Flow
@@ -41,6 +38,12 @@ except OSError:
 def home():
     if 'user' not in session:
         return redirect(url_for('login'))
+    # TODO(sxwang): Display option to link or unlink based on if user has an
+    # access token set
+    # TODO(sxwang): Display option to activate if user has a token and an
+    # emailer set
+    # TODO(sxwang): Link to get a new emailer
+    # TODO(sxwang): Form to reset email address
     return render_template('index.html', real_name=session['user'])
 
 
@@ -129,7 +132,7 @@ def dropbox_unlink():
     if kindle_name is None:
         abort(403)
     user = User.query.filter_by(kindle_name=kindle_name).first()
-    for attribute in ['emailer', 'active', 'access_token', 'delta_cursor']:
+    for attribute in ['active', 'access_token', 'delta_cursor']:
         setattr(user, attribute, None)
     db.commit()
 
