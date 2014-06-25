@@ -12,26 +12,20 @@ import os
 
 import constants
 import emailer
+from kindlebox.database import db
+from kindlebox.models import User, Book
 
 
-# configuration
 DEBUG = True
-DATABASE = 'myapp.db'
-SECRET_KEY = 'development key'
 SUBSCRIPTION_MESSAGE = '''
 Yay kindlebox.
 Here's your email: {emailer_address}
 '''
 
-# Fill these in!
 DROPBOX_APP_KEY = constants.DROPBOX_APP_KEY
 DROPBOX_APP_SECRET = constants.DROPBOX_APP_SECRET
 
-# create our little application :)
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/' + DATABASE
-db = SQLAlchemy(app)
-
 app.config.from_object(__name__)
 app.config.from_envvar('FLASKR_SETTINGS', silent=True)
 
@@ -40,28 +34,6 @@ try:
     os.makedirs(app.instance_path)
 except OSError:
     pass
-
-
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    kindle_name = db.Column(db.String(80), unique=True)
-    email = db.Column(db.String(120), unique=True)
-    emailer = db.Column(db.String(120), unique=True)
-    active = db.Column(db.Boolean)
-    access_token = db.Column(db.LargeBinary)
-    delta_cursor = db.Column(db.Text)
-    books = db.relationship('Book', backref='user', lazy='dynamic')
-
-    def __init__(self, kindle_name, email):
-        self.kindle_name = kindle_name
-        self.email = email
-
-
-class Book(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    book_hash = db.Column(db.Integer)
-    pathname = db.Column(db.Text)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
 
 @app.route('/')
@@ -186,7 +158,7 @@ def get_random_string(size=32):
 
 
 def main():
-    db.create_all()
+    from 
     app.run()
 
 if __name__ == '__main__':
