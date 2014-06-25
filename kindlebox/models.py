@@ -5,6 +5,7 @@ from kindlebox.database import Base
 class User(Base):
     __tablename__ = 'user'
     id = Column(Integer, primary_key=True)
+    user_id = Column(Integer)
     kindle_name = Column(String(80), unique=True)
     email = Column(String(120), unique=True)
     emailer = Column(String(120), unique=True)

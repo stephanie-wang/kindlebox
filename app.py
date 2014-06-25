@@ -43,12 +43,12 @@ users = SetQueue()
 def home():
     if 'user' not in session:
         return redirect(url_for('login'))
-    # TODO(sxwang): Display option to link or unlink based on if user has an
+    # TODO: Display option to link or unlink based on if user has an
     # access token set
-    # TODO(sxwang): Display option to activate if user has a token and an
+    # TODO: Display option to activate if user has a token and an
     # emailer set
-    # TODO(sxwang): Link to get a new emailer
-    # TODO(sxwang): Form to reset email address
+    # TODO: Link to get a new emailer
+    # TODO: Form to reset email address
     return render_template('index.html', real_name=session['user'])
 
 
@@ -148,7 +148,7 @@ def dropbox_unlink():
 def verify():
     if request.method != 'POST':
         return request.args.get('challenge') 
-    # TODO(sxwang): check this
+    # TODO: check this
     signature = request.headers.get('X-Dropbox-Signature')
     if signature != hmac.new(DROPBOX_APP_SECRET, request.data,
             hashlib.sha256).hexdigest():
@@ -183,6 +183,7 @@ def get_random_string(size=32):
 
 
 def main():
+    # TODO: start a thread to read from users queue
     from kindlebox.database import init_db
     init_db()
     app.run()
