@@ -11,6 +11,7 @@ import constants
 import emailer
 from kindlebox.database import db
 from kindlebox.models import User, Book
+from kindlebox.queue import SetQueue
 
 
 DEBUG = True
@@ -32,6 +33,8 @@ try:
     os.makedirs(app.instance_path)
 except OSError:
     pass
+
+users = SetQueue()
 
 
 @app.route('/')
@@ -114,6 +117,7 @@ def dropbox_auth_finish():
 
     user = User.query.filter_by(kindle_name=kindle_name).first()
     user.access_token = access_token
+    user.user_id = user_id
     user.emailer = refresh_emailer(kindle_name, user)
 
     return redirect(url_for('home'))
@@ -137,6 +141,20 @@ def dropbox_unlink():
     db.commit()
 
     return redirect(url_for('home'))
+
+@app.route('/dropbox-webhook', methods=['GET'])
+def verify():
+    if request.method != 'POST':
+        return request.args.get('challenge') 
+    # TODO(sxwang): check this
+    signature = request.headers.get('X-Dropbox-Signature')
+    if signature != hmac.new(DROPBOX_APP_SECRET, request.data, sha256).hexdigest():
+        abort(403)
+
+    for user_id in json.loads(request.data)['delta']['users']:
+        users.add(user_id)
+
+    return ''
 
 
 def refresh_emailer(kindle_name, user=None):
