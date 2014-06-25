@@ -17,6 +17,7 @@ from kindlebox.models import User, Book
 
 
 DEBUG = True
+SECRET_KEY = 'hello'
 SUBSCRIPTION_MESSAGE = '''
 Yay kindlebox.
 Here's your email: {emailer_address}
@@ -58,8 +59,8 @@ def login():
                 return redirect(url_for('home'))
             else:
                 new_user = User(kindle_name, email)
-                db.session.add(new_user)
-                db.session.commit()
+                db.add(new_user)
+                db.commit()
                 return redirect(url_for('dropbox_auth_start'))
     return render_template('login.html', error=error)
 
@@ -78,7 +79,7 @@ def activate():
     kindle_name = session.get('user')
     user = User.query.filter_by(kindle_name=kindle_name).first()
     user.active = True
-    db.session.commit()
+    db.commit()
 
 
 @app.route('/new-emailer', methods=['POST'])
@@ -130,7 +131,7 @@ def dropbox_unlink():
     user = User.query.filter_by(kindle_name=kindle_name).first()
     for attribute in ['emailer', 'active', 'access_token', 'delta_cursor']:
         setattr(user, attribute, None)
-    db.session.commit()
+    db.commit()
 
     return redirect(url_for('home'))
 
@@ -144,7 +145,7 @@ def refresh_emailer(kindle_name, user=None):
             SUBSCRIPTION_MESSAGE.format(emailer_address=emailer_address))
 
     user.emailer = emailer_address
-    db.session.commit()
+    db.commit()
 
 
 def get_auth_flow():
@@ -158,7 +159,8 @@ def get_random_string(size=32):
 
 
 def main():
-    from 
+    from kindlebox.database import init_db
+    init_db()
     app.run()
 
 if __name__ == '__main__':
