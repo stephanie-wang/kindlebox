@@ -25,3 +25,7 @@ class Book(Base):
     book_hash = Column(Integer)
     pathname = Column(Text)
     user_id = Column(Integer, ForeignKey('user.id'))
+
+    def __init__(self, pathname, user_id):
+        self.pathname = pathname
+        self.user_id = user_id

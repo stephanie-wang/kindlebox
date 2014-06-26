@@ -12,7 +12,7 @@ import os
 import constants
 import emailer
 from kindlebox.database import db
-from kindlebox.models import User, Book
+from kindlebox.models import User
 from kindlebox.queue import SetQueue
 
 
