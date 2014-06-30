@@ -94,7 +94,11 @@ def activate():
 def new_emailer():
     if request.method == 'POST':
         kindle_name = request.form['kindle_name']
-        refresh_emailer(kindle_name)
+        set_new_emailer(kindle_name)
+        db.commit()
+
+        emailer.send_mail(user.emailer, user.email, 'subscribe',
+                SUBSCRIPTION_MESSAGE.format(emailer_address=emailer_address))
 
 
 @app.route('/dropbox-auth-finish')
@@ -120,7 +124,11 @@ def dropbox_auth_finish():
     user = User.query.filter_by(kindle_name=kindle_name).first()
     user.access_token = access_token
     user.user_id = user_id
-    user.emailer = refresh_emailer(kindle_name, user)
+    set_new_emailer(kindle_name, user)
+    db.commit()
+
+    emailer.send_mail(user.emailer, user.email, 'subscribe',
+            SUBSCRIPTION_MESSAGE.format(emailer_address=emailer_address))
 
     return redirect(url_for('home'))
 
@@ -160,16 +168,12 @@ def verify():
     return ''
 
 
-def refresh_emailer(kindle_name, user=None):
+def set_new_emailer(kindle_name, user=None):
     if user is None:
         user = User.query.filter_by(kindle_name=kindle_name).first()
     random_base = get_random_string()
     emailer_address = 'kindleboxed+%s@gmail.com' % random_base
-    emailer.send_mail(emailer_address, user.email, 'subscribe',
-            SUBSCRIPTION_MESSAGE.format(emailer_address=emailer_address))
-
     user.emailer = emailer_address
-    db.commit()
 
 
 def get_auth_flow():

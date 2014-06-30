@@ -5,70 +5,87 @@ import os.path
 
 from kindlebox import emailer
 from kindlebox.database import db
-from kindlebox.database import User, Book
+from kindlebox.models import User, Book
 
-BOOK_MIMETYPES = set(
+BOOK_MIMETYPES = set([
     'application/pdf',
     'application/x-mobipocket-ebook',
     'application/epub+zip',
     'application/vnd.amazon.ebook',
-    'text/plain')
+    'text/plain',
+    ])
 
 
 def process_user(user_id):
     user = User.query.filter_by(user_id=user_id).first()
+    client = DropboxClient(user.access_token)
+    delta = client.delta(user.cursor)
 
+    added_books = get_added_books(delta['entries'], client)
+    removed_books = get_removed_books(delta['entries'])
+
+    # Download and get hashes for books added to the directory.
+    emailed_books = []
+    for book_path, book_hash in added_books:
+        duplicates = user.books.filter_by(hash=book_hash)
+        if duplicates.count() > 1:
+            continue
+        emailed_books.append(book_path)
+
+    # Email ze books.
     email_from = user.emailer
     email_to = kindle_name + '@kindle.com'
+    for i in range(len(emailed_books) / 25):
+        books = emailed_books[i * 25 : (i+1) * 25] 
+        emailer.send_email(email_from, email_to, 'convert', '', books)
 
-    client = get_client(user.access_token)
-    tmp_paths = download_books(client, cursor=user.cursor)
-    
-    # TODO: send books in chunks of <=25, <=50MB each (maybe zip?)
-    emailer.send_mail(emailer, email, 'convert', '', tmp_paths)
+    # Update the Dropbox delta cursor in database.
+    user.cursor = delta['cursor']
+    # Save all books to the database.
+    for book_path, book_hash in added_books:
+        book = Book(user_id, book_path, book_hash)
+        db.add(book)
+        try:
+            os.unlink(book_path)
+        except OSError:
+            log.error("Womp womp. Couldn't delete book %s. Not a file?" %
+                    book_path)
+    for book_path in removed_books:
+        book = user.books.filter_by(pathname=book_path).first()
+        db.delete(book)
+    db.commit()
 
-    # TODO: save to database, delete tmp files
 
-def get_client(access_token):
-    '''
-    Get the Dropbox client from cache or create it.
-    '''
-    return DropboxClient(access_token)
-
-def download_books(client, cursor=None):
-    # TODO: catch 401 error
-    delta = client.delta(cursor)
-
-    changed = delta['entries']
-    added = [entry for entry in changed if entry[1] != None]
-    removed = [entry for entry in changed if entry[1] == None]
-
+def get_added_books(delta_entries, client):
     # Get all entries that were added and are not a directory.
-    books_added = [entry[0] for entry in added if not entry[1]['is_dir']] 
-    # TODO: check books for file renames
-    # TODO: check books for correct file extensions
-    hashes = {}
-    for i, book_path in enumerate(books_added):
+    added_books = []
+    for entry in delta_entries:
+        if entry[1] == None:
+            continue
+        if entry[1]['is_dir']:
+            continue
+        book_path = canonicalize(entry[0])
+        added_books.append(book_path)
+
+    # Download the books and get the hashes
+    hashes = []
+    for book_path in added_books:
         if book_path not in BOOK_MIMETYPES:
             continue
-        hashes[book_path] = download_book(client, book_path)
+        hashes.append((book_path, download_book(client, book_path)))
 
-    # TODO: what happens if emailing fails midway through hashes? need some sort
-    # of saved flag in database. should probably save books one at a time in case
-    # of failure
- 
-    books_removed = [entry[0] for entry in removed]
-    books_removed = zip(books_removed, [None] * len(book_removed))
-    hashes.update(books_removed)
+    return hashes
+    
 
-    return hashes 
+def get_removed_books(delta_entries):
+    return [entry[0] for entry in delta_entries if entry[1] == None]
 
 
 def download_book(client, book_path):
     try:
         os.makedirs(book_path)
     except OSError:
-        continue
+        pass
 
     md5 = hashlib.md5()
     with open(book_path, 'w') as tmp_book:
@@ -81,11 +98,14 @@ def download_book(client, book_path):
 
     return book_hash
 
+
 def canonicalize(pathname):
     return pathname.lower()
 
+
 def main():
     pass
+
 
 if __name__ == '__main__':
     main()
