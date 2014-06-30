@@ -10,7 +10,7 @@ import hmac
 import os
 
 import constants
-import emailer
+from kindlebox import emailer
 from kindlebox.database import db
 from kindlebox.models import User
 from kindlebox.queue import SetQueue

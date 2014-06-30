@@ -1,10 +1,18 @@
 from dropbox.client import DropboxClient
 import md5
+import mimetypes
 import os.path
 
-import emailer
+from kindlebox import emailer
 from kindlebox.database import db
 from kindlebox.database import User, Book
+
+BOOK_MIMETYPES = set(
+    'application/pdf',
+    'application/x-mobipocket-ebook',
+    'application/epub+zip',
+    'application/vnd.amazon.ebook',
+    'text/plain')
 
 
 def process_user(user_id):
@@ -14,11 +22,7 @@ def process_user(user_id):
     email_to = kindle_name + '@kindle.com'
 
     client = get_client(user.access_token)
-    current_books = [book.pathname for book in user.books]
-    tmp_paths = download_books(
-            client,
-            cursor=user.cursor,
-            current_books=current_books) 
+    tmp_paths = download_books(client, cursor=user.cursor)
     
     # TODO: send books in chunks of <=25, <=50MB each (maybe zip?)
     emailer.send_mail(emailer, email, 'convert', '', tmp_paths)
@@ -31,34 +35,33 @@ def get_client(access_token):
     '''
     return DropboxClient(access_token)
 
-def download_books(client, cursor=None, current_books=None):
-    if current_books is None:
-        current_books = []
-
+def download_books(client, cursor=None):
     # TODO: catch 401 error
     delta = client.delta(cursor)
 
-    # Get all entries that were added and are not a directory.
     changed = delta['entries']
     added = [entry for entry in changed if entry[1] != None]
     removed = [entry for entry in changed if entry[1] == None]
 
-    books_added = [book[0] for book in added if not book[1]['is_dir']] 
-    books_added = [book for book in books_added if book not in current_books]
+    # Get all entries that were added and are not a directory.
+    books_added = [entry[0] for entry in added if not entry[1]['is_dir']] 
     # TODO: check books for file renames
     # TODO: check books for correct file extensions
-    hashes = [download_book(client, book_path) for book_path in books_added]
+    hashes = {}
+    for i, book_path in enumerate(books_added):
+        if book_path not in BOOK_MIMETYPES:
+            continue
+        hashes[book_path] = download_book(client, book_path)
 
     # TODO: what happens if emailing fails midway through hashes? need some sort
     # of saved flag in database. should probably save books one at a time in case
     # of failure
-    books = zip(books_added, hashes)
  
-    books_removed = [book[0] for book in removed]
+    books_removed = [entry[0] for entry in removed]
     books_removed = zip(books_removed, [None] * len(book_removed))
-    books.extend(books_removed)
+    hashes.update(books_removed)
 
-    return books
+    return hashes 
 
 
 def download_book(client, book_path):
