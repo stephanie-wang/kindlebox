@@ -20,7 +20,7 @@ DEBUG = True
 SECRET_KEY = 'hello'
 SUBSCRIPTION_MESSAGE = '''
 Yay kindlebox.
-Here's your email: {emailer_address}
+Here's your email: %s
 '''
 
 DROPBOX_APP_KEY = constants.DROPBOX_APP_KEY
@@ -82,12 +82,14 @@ def logout():
 
 @app.route('/activate')
 def activate():
+    # TODO: make this a POST, generate random token?
     if 'user' not in session:
         return redirect(url_for('login'))
     kindle_name = session.get('user')
     user = User.query.filter_by(kindle_name=kindle_name).first()
     user.active = True
     db.commit()
+    return render_template('index.html', real_name=session['user'])
 
 
 @app.route('/new-emailer', methods=['POST'])
@@ -98,7 +100,7 @@ def new_emailer():
         db.commit()
 
         emailer.send_mail(user.emailer, user.email, 'subscribe',
-                SUBSCRIPTION_MESSAGE.format(emailer_address=emailer_address))
+                SUBSCRIPTION_MESSAGE % user.emailer)
 
 
 @app.route('/dropbox-auth-finish')
@@ -128,7 +130,7 @@ def dropbox_auth_finish():
     db.commit()
 
     emailer.send_mail(user.emailer, user.email, 'subscribe',
-            SUBSCRIPTION_MESSAGE.format(emailer_address=emailer_address))
+            SUBSCRIPTION_MESSAGE % user.emailer)
 
     return redirect(url_for('home'))
 
