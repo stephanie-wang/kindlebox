@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-
-import binascii
 from dropbox.client import DropboxOAuth2Flow
 from flask import Flask, request, session, redirect, url_for, abort, \
     render_template, flash
 from flask.ext.sqlalchemy import SQLAlchemy
 import hashlib
 import hmac
+from itsdangerous import URLSafeSerializer, BadSignature
 import os
+from sqlalchemy.orm.exc import NoResultFound
 
 import constants
 from kindlebox import emailer
@@ -17,7 +17,7 @@ from kindlebox.queue import SetQueue
 
 
 DEBUG = True
-SECRET_KEY = 'hello'
+SECRET_KEY = constants.SECRET_KEY
 SUBSCRIPTION_MESSAGE = '''
 Yay kindlebox.
 Here's your email: %s
@@ -96,11 +96,18 @@ def activate():
 def new_emailer():
     if request.method == 'POST':
         kindle_name = request.form['kindle_name']
-        set_new_emailer(kindle_name)
+        try:
+            user = User.query.filter_by(kindle_name=kindle_name).one()
+        except NoResultFound:
+            # TODO: log
+            # TODO: wrap this in a get_or_404
+            abort(404)
+
+        user.set_new_emailer()
         db.commit()
 
         emailer.send_mail(user.emailer, user.email, 'subscribe',
-                SUBSCRIPTION_MESSAGE % user.emailer)
+                          SUBSCRIPTION_MESSAGE % user.emailer)
 
 
 @app.route('/dropbox-auth-finish')
@@ -126,11 +133,13 @@ def dropbox_auth_finish():
     user = User.query.filter_by(kindle_name=kindle_name).first()
     user.access_token = access_token
     user.user_id = user_id
-    set_new_emailer(kindle_name, user)
+
+    user.set_new_emailer()
+
     db.commit()
 
     emailer.send_mail(user.emailer, user.email, 'subscribe',
-            SUBSCRIPTION_MESSAGE % user.emailer)
+                      SUBSCRIPTION_MESSAGE % user.emailer)
 
     return redirect(url_for('home'))
 
@@ -154,14 +163,15 @@ def dropbox_unlink():
 
     return redirect(url_for('home'))
 
+
 @app.route('/dropbox-webhook', methods=['GET'])
 def verify():
     if request.method != 'POST':
-        return request.args.get('challenge') 
+        return request.args.get('challenge')
     # TODO: check this
     signature = request.headers.get('X-Dropbox-Signature')
     if signature != hmac.new(DROPBOX_APP_SECRET, request.data,
-            hashlib.sha256).hexdigest():
+                             hashlib.sha256).hexdigest():
         abort(403)
 
     for user_id in json.loads(request.data)['delta']['users']:
@@ -170,22 +180,32 @@ def verify():
     return ''
 
 
-def set_new_emailer(kindle_name, user=None):
-    if user is None:
-        user = User.query.filter_by(kindle_name=kindle_name).first()
-    random_base = get_random_string()
-    emailer_address = 'kindleboxed+%s@gmail.com' % random_base
-    user.emailer = emailer_address
+@app.route('/activate/<payload>')
+def activate_user(payload):
+    s = get_serializer()
+    try:
+        user_info = s.loads(payload)
+    except BadSignature:
+        abort(404)
+
+    user = User.query.get_or_404(user_info.get('id'))
+    if user.emailer != user_info.get('emailer'):
+        abort(404)
+    user.activate()
+    # flash('User activated')
+    return redirect(url_for('home'))
 
 
 def get_auth_flow():
     redirect_uri = url_for('dropbox_auth_finish', _external=True)
     return DropboxOAuth2Flow(DROPBOX_APP_KEY, DROPBOX_APP_SECRET, redirect_uri,
-            session, 'dropbox-auth-csrf-token')
+                             session, 'dropbox-auth-csrf-token')
 
 
-def get_random_string(size=32):
-    return binascii.b2a_hex(os.urandom(size))
+def get_serializer(secret_key=None):
+    if secret_key is None:
+        secret_key = SECRET_KEY
+    return URLSafeSerializer(secret_key)
 
 
 def main():

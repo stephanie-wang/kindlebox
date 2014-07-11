@@ -36,7 +36,7 @@ def process_user(user_id):
     email_from = user.emailer
     email_to = kindle_name + '@kindle.com'
     for i in range(len(emailed_books) / 25):
-        books = emailed_books[i * 25 : (i+1) * 25] 
+        books = emailed_books[i * 25:(i+1) * 25]
         emailer.send_email(email_from, email_to, 'convert', '', books)
 
     # Update the Dropbox delta cursor in database.
@@ -49,7 +49,7 @@ def process_user(user_id):
             os.unlink(book_path)
         except OSError:
             log.error("Womp womp. Couldn't delete book %s. Not a file?" %
-                    book_path)
+                      book_path)
     for book_path in removed_books:
         book = user.books.filter_by(pathname=book_path).first()
         db.delete(book)
@@ -60,7 +60,7 @@ def get_added_books(delta_entries, client):
     # Get all entries that were added and are not a directory.
     added_books = []
     for entry in delta_entries:
-        if entry[1] == None:
+        if entry[1] is None:
             continue
         if entry[1]['is_dir']:
             continue
@@ -75,10 +75,10 @@ def get_added_books(delta_entries, client):
         hashes.append((book_path, download_book(client, book_path)))
 
     return hashes
-    
+
 
 def get_removed_books(delta_entries):
-    return [entry[0] for entry in delta_entries if entry[1] == None]
+    return [entry[0] for entry in delta_entries if entry[1] is None]
 
 
 def download_book(client, book_path):

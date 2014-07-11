@@ -1,6 +1,10 @@
 from sqlalchemy import *
 from sqlalchemy.orm import relationship
+
+
 from kindlebox.database import Base
+from kindlebox.utils import get_random_string
+
 
 class User(Base):
     __tablename__ = 'user'
@@ -17,6 +21,14 @@ class User(Base):
     def __init__(self, kindle_name, email):
         self.kindle_name = kindle_name
         self.email = email
+
+    def activate(self):
+        self.active = True
+
+    def set_new_emailer(self):
+        random_base = get_random_string()
+        emailer_address = 'kindleboxed+%s@gmail.com' % random_base
+        self.emailer = emailer_address
 
 
 class Book(Base):
