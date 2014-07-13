@@ -7,7 +7,7 @@ import hashlib
 import hmac
 from itsdangerous import URLSafeSerializer, BadSignature
 import os
-from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 import constants
 from kindlebox import emailer
@@ -21,6 +21,7 @@ SECRET_KEY = constants.SECRET_KEY
 SUBSCRIPTION_MESSAGE = '''
 Yay kindlebox.
 Here's your email: %s
+Here's your link: %s
 '''
 
 DROPBOX_APP_KEY = constants.DROPBOX_APP_KEY
@@ -80,16 +81,25 @@ def logout():
     return redirect(url_for('home'))
 
 
-@app.route('/activate')
-def activate():
-    # TODO: make this a POST, generate random token?
-    if 'user' not in session:
-        return redirect(url_for('login'))
-    kindle_name = session.get('user')
-    user = User.query.filter_by(kindle_name=kindle_name).first()
-    user.active = True
-    db.commit()
-    return render_template('index.html', real_name=session['user'])
+@app.route('/activate/<payload>')
+def activate_user(payload):
+    s = get_serializer()
+    try:
+        user_info = s.loads(payload)
+    except BadSignature:
+        abort(404)
+
+    # Check that user ID and emailer address match.
+    try:
+        user = User.query.filter_by(id=user_info.get('id')).one()
+    except NoResultFound, MultipleResultsFound:
+        abort(404)
+    if user.emailer != user_info.get('emailer'):
+        # TODO: Error page if the emailer address is different now.
+        abort(404)
+
+    user.activate()
+    return redirect(url_for('home'))
 
 
 @app.route('/new-emailer', methods=['POST'])
@@ -100,14 +110,19 @@ def new_emailer():
             user = User.query.filter_by(kindle_name=kindle_name).one()
         except NoResultFound:
             # TODO: log
-            # TODO: wrap this in a get_or_404
             abort(404)
 
-        user.set_new_emailer()
-        db.commit()
+        # User should not be requesting a new emailer if already active.
+        if user.active:
+            # TODO: log
+            abort(404)
 
-        emailer.send_mail(user.emailer, user.email, 'subscribe',
-                          SUBSCRIPTION_MESSAGE % user.emailer)
+        payload = user.set_new_emailer()
+        db.commit()
+        send_activate_email(user)
+        return redirect(url_for('home'))
+    flash('huh')
+    return redirect(url_for('home'))
 
 
 @app.route('/dropbox-auth-finish')
@@ -133,14 +148,9 @@ def dropbox_auth_finish():
     user = User.query.filter_by(kindle_name=kindle_name).first()
     user.access_token = access_token
     user.user_id = user_id
-
-    user.set_new_emailer()
-
+    payload = user.set_new_emailer()
     db.commit()
-
-    emailer.send_mail(user.emailer, user.email, 'subscribe',
-                      SUBSCRIPTION_MESSAGE % user.emailer)
-
+    send_activate_email(user)
     return redirect(url_for('home'))
 
 
@@ -180,22 +190,6 @@ def verify():
     return ''
 
 
-@app.route('/activate/<payload>')
-def activate_user(payload):
-    s = get_serializer()
-    try:
-        user_info = s.loads(payload)
-    except BadSignature:
-        abort(404)
-
-    user = User.query.get_or_404(user_info.get('id'))
-    if user.emailer != user_info.get('emailer'):
-        abort(404)
-    user.activate()
-    # flash('User activated')
-    return redirect(url_for('home'))
-
-
 def get_auth_flow():
     redirect_uri = url_for('dropbox_auth_finish', _external=True)
     return DropboxOAuth2Flow(DROPBOX_APP_KEY, DROPBOX_APP_SECRET, redirect_uri,
@@ -206,6 +200,17 @@ def get_serializer(secret_key=None):
     if secret_key is None:
         secret_key = SECRET_KEY
     return URLSafeSerializer(secret_key)
+
+
+def send_activate_email(user):
+    payload = {
+            'id': user.id,
+            'emailer': user.emailer,
+            }
+    s = get_serializer()
+    payload = s.dumps(payload)
+    emailer.send_mail(user.emailer, user.email, 'subscribe',
+                      SUBSCRIPTION_MESSAGE % (user.emailer, payload))
 
 
 def main():
