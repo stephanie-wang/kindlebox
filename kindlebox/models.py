@@ -9,13 +9,13 @@ from kindlebox.utils import get_random_string
 class User(Base):
     __tablename__ = 'user'
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer)
+    dropbox_id = Column(Integer)
     kindle_name = Column(String(80), unique=True)
     email = Column(String(120), unique=True)
     emailer = Column(String(120), unique=True)
     active = Column(Boolean)
     access_token = Column(LargeBinary)
-    delta_cursor = Column(Text)
+    cursor = Column(Text)
     books = relationship('Book', backref='user', lazy='dynamic')
 
     def __init__(self, kindle_name, email):

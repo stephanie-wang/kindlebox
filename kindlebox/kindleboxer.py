@@ -16,8 +16,11 @@ BOOK_MIMETYPES = set([
     ])
 
 
-def process_user(user_id):
-    user = User.query.filter_by(user_id=user_id).first()
+def process_user(dropbox_id):
+    user = User.query.filter_by(dropbox_id=dropbox_id).first()
+    if not user.active:
+        return
+
     client = DropboxClient(user.access_token)
     delta = client.delta(user.cursor)
 
@@ -34,7 +37,8 @@ def process_user(user_id):
 
     # Email ze books.
     email_from = user.emailer
-    email_to = kindle_name + '@kindle.com'
+    #email_to = user.kindle_name + '@kindle.com'
+    email_to = user.email
     for i in range(len(emailed_books) / 25):
         books = emailed_books[i * 25:(i+1) * 25]
         emailer.send_email(email_from, email_to, 'convert', '', books)
@@ -43,7 +47,7 @@ def process_user(user_id):
     user.cursor = delta['cursor']
     # Save all books to the database.
     for book_path, book_hash in added_books:
-        book = Book(user_id, book_path, book_hash)
+        book = Book(user.id, book_path, book_hash)
         db.add(book)
         try:
             os.unlink(book_path)

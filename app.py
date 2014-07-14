@@ -131,7 +131,7 @@ def dropbox_auth_finish():
     if kindle_name is None:
         abort(403)
     try:
-        access_token, user_id, url_state = get_auth_flow().finish(request.args)
+        access_token, dropbox_id, url_state = get_auth_flow().finish(request.args)
     except DropboxOAuth2Flow.BadRequestException, e:
         abort(400)
     except DropboxOAuth2Flow.BadStateException, e:
@@ -147,7 +147,7 @@ def dropbox_auth_finish():
 
     user = User.query.filter_by(kindle_name=kindle_name).first()
     user.access_token = access_token
-    user.user_id = user_id
+    user.dropbox_id = dropbox_id
     payload = user.set_new_emailer()
     db.commit()
     send_activate_email(user)
@@ -167,7 +167,7 @@ def dropbox_unlink():
     if kindle_name is None:
         abort(403)
     user = User.query.filter_by(kindle_name=kindle_name).first()
-    for attribute in ['active', 'access_token', 'delta_cursor']:
+    for attribute in ['active', 'access_token', 'cursor']:
         setattr(user, attribute, None)
     db.commit()
 
