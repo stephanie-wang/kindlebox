@@ -97,31 +97,34 @@ def activate_user(payload):
     if user.emailer != user_info.get('emailer'):
         # TODO: Error page if the emailer address is different now.
         abort(404)
+    # TODO: Error page if user already active.
 
     user.activate()
+    db.commit()
+    user = User.query.filter_by(id=user_info.get('id')).one()
     return redirect(url_for('home'))
 
 
 @app.route('/new-emailer', methods=['POST'])
 def new_emailer():
-    if request.method == 'POST':
-        kindle_name = request.form['kindle_name']
-        try:
-            user = User.query.filter_by(kindle_name=kindle_name).one()
-        except NoResultFound:
-            # TODO: log
-            abort(404)
+    if 'user' not in session:
+        return redirect(url_for('login'))
 
-        # User should not be requesting a new emailer if already active.
-        if user.active:
-            # TODO: log
-            abort(404)
+    kindle_name = session.get('user')
+    try:
+        user = User.query.filter_by(kindle_name=kindle_name).one()
+    except NoResultFound:
+        # TODO: log
+        abort(404)
 
-        payload = user.set_new_emailer()
-        db.commit()
-        send_activate_email(user)
-        return redirect(url_for('home'))
-    flash('huh')
+    # User should not be requesting a new emailer if already active.
+    if user.active:
+        # TODO: log
+        abort(404)
+
+    payload = user.set_new_emailer()
+    db.commit()
+    send_activate_email(user)
     return redirect(url_for('home'))
 
 
