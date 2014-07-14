@@ -10,10 +10,10 @@ import os
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 import constants
-from kindlebox import emailer
+from kindlebox import emailer, kindleboxer
 from kindlebox.database import db
 from kindlebox.models import User
-from kindlebox.queue import SetQueue
+from kindlebox.queue import queuefunc
 
 
 DEBUG = True
@@ -30,14 +30,13 @@ DROPBOX_APP_SECRET = constants.DROPBOX_APP_SECRET
 app = Flask(__name__)
 app.config.from_object(__name__)
 app.config.from_envvar('FLASKR_SETTINGS', silent=True)
+app.config['REDIS_QUEUE_KEY'] = 'dropbox_delta_users'
 
 # Ensure instance directory exists.
 try:
     os.makedirs(app.instance_path)
 except OSError:
     pass
-
-users = SetQueue()
 
 
 @app.route('/')
@@ -181,16 +180,20 @@ def dropbox_unlink():
 def verify():
     if request.method != 'POST':
         return request.args.get('challenge')
-    # TODO: check this
     signature = request.headers.get('X-Dropbox-Signature')
     if signature != hmac.new(DROPBOX_APP_SECRET, request.data,
                              hashlib.sha256).hexdigest():
         abort(403)
 
-    for user_id in json.loads(request.data)['delta']['users']:
-        users.add(user_id)
+    for dropbox_id in json.loads(request.data)['delta']['users']:
+        _process_user.delay(dropbox_id)
 
     return ''
+
+
+@queuefunc
+def _process_user(dropbox_id):
+    return kindleboxer.process_user(dropbox_id)
 
 
 def get_auth_flow():
