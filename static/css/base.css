@@ -1,0 +1,9 @@
+body {
+    padding-top: 50px;
+    background-image: url('../lightpaperfibers.png');
+    background-repeat: repeat;
+}
+
+.container {
+    padding-top: 40px 15px;
+}
