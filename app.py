@@ -100,7 +100,8 @@ def activate_user(payload):
 
     user.activate()
     db.commit()
-    user = User.query.filter_by(id=user_info.get('id')).one()
+    _process_user.delay(user.dropbox_id)
+
     return redirect(url_for('home'))
 
 
@@ -193,7 +194,7 @@ def verify():
 
 @queuefunc
 def _process_user(dropbox_id):
-    return kindleboxer.process_user(dropbox_id)
+    kindleboxer.process_user(dropbox_id)
 
 
 def get_auth_flow():
