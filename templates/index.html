@@ -1,9 +1,16 @@
 {% extends "base.html" %}
 {% block body %}
-  {% if real_name %}
-    <p>Welcome {{ real_name }}!
+    <p>Welcome {{ kindle_name }}!
+
+    {% if linked %}
     <p><a href="{{ url_for('dropbox_unlink') }} " method="post">Unlink</a>
-  {% else %}
+    {% else %}
     <a href="{{ url_for('dropbox_auth_start') }}">Link</a>
-  {% endif %}  
+    {% endif %}
+
+    {% if active %}
+    <p>activated!
+    {% else %}
+    <p>womp not active
+    {% endif %}
 {% endblock %}

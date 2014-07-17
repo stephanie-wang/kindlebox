@@ -43,17 +43,24 @@ except OSError:
 def home():
     if 'user' not in session:
         return redirect(url_for('login'))
-    # TODO: Display option to link or unlink based on if user has an
-    # access token set
+    kindle_name = session['user']
+    user = User.query.filter_by(kindle_name=kindle_name).first()
+    response = {
+            'kindle_name': kindle_name,
+            'linked': user.access_token is not None,
+            'active': user.active,
+            }
     # TODO: Display option to activate if user has a token and an
     # emailer set
     # TODO: Link to get a new emailer
     # TODO: Form to reset email address
-    return render_template('index.html', real_name=session['user'])
+    return render_template('index.html', **response)
 
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if 'user' in session:
+        return redirect(url_for('home'))
     error = None
     if request.method == 'POST':
         kindle_name = request.form.get('kindle_name')
