@@ -72,11 +72,14 @@ def login():
             user = User.query.filter_by(kindle_name=kindle_name).first()
             if user is not None:
                 return redirect(url_for('home'))
-            else:
-                new_user = User(kindle_name, email)
-                db.add(new_user)
-                db.commit()
-                return redirect(url_for('dropbox_auth_start'))
+
+            new_user = User(kindle_name, email)
+            db.add(new_user)
+            payload = user.set_new_emailer()
+            db.commit()
+            send_activate_email(user)
+            return redirect(url_for('dropbox_auth_start'))
+
     return render_template('login.html', error=error)
 
 
@@ -131,7 +134,13 @@ def new_emailer():
 
     payload = user.set_new_emailer()
     db.commit()
-    send_activate_email(user)
+    try:
+        send_activate_email(user)
+    except:
+        # TODO: log, check what exceptions emailer can throw. Don't want to
+        # block on this for now.
+        pass
+
     return redirect(url_for('home'))
 
 
@@ -158,9 +167,7 @@ def dropbox_auth_finish():
     user = User.query.filter_by(kindle_name=kindle_name).first()
     user.access_token = access_token
     user.dropbox_id = dropbox_id
-    payload = user.set_new_emailer()
     db.commit()
-    send_activate_email(user)
     return redirect(url_for('home'))
 
 
