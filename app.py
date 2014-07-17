@@ -56,8 +56,8 @@ def home():
 def login():
     error = None
     if request.method == 'POST':
-        kindle_name = request.form['kindle_name']
-        email = request.form['email']
+        kindle_name = request.form.get('kindle_name')
+        email = request.form.get('email')
 
         if kindle_name is not None and email is not None:
             session['user'] = kindle_name

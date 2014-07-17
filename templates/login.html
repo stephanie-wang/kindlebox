@@ -1,21 +1,26 @@
-{% extends "layout.html" %}
+{% extends "base.html" %}
 {% block body %}
   {% if error %}<p class=error><strong>Error:</strong> {{ error }}{% endif %}
 
 <form action="{{ url_for('login') }}" method=post>
 
   <div class="form-group">
-    <label for="kindleName">Kindle username</label>
-    <input type="text" class="form-control" id="kindleName" placeholder="Enter Kindle username (@kindle.com)">
+    <label for="kindle-name">Kindle username</label>
+    <input type="text" id="kindle-name" name="kindle_name" class="form-control" placeholder="Enter Kindle username (@kindle.com)">
   </div>
 
   <div class="form-group">
     <label for="Email">Email</label>
-    <input type="email" class="form-control" id="email" placeholder="Enter your email">
+    <input type="email" id="email" name="email" class="form-control" placeholder="Enter your email">
   </div>
 
-  <button type="submit" class="btn btn-default">Submit</button>
+  <input type="submit" class="btn btn-default" value="Login">
 
 </form>
 
 {% endblock %}
+
+{% block scripts %}
+<script type="text/javascript" src="static/js/login.js"></script>
+{% endblock %}
+
