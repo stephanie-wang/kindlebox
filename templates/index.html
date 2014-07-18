@@ -1,39 +1,61 @@
 {% extends "base.html" %}
 {% block body %}
-    {% if logged_in %}
-    <p><a href="{{ url_for('dropbox_unlink') }} " method="post">Disconnect from Dropbox</a>
-    {% else %}
-    <a href="{{ url_for('login') }}">Login with Dropbox</a>
-    {% endif %}
+<div class="instruction-row">
+    <div class="instruction-num">
+        1.
+    </div>
+    <div class="instruction">
+        {% if logged_in %}
+        <a href="{{ url_for('dropbox_unlink') }} " method="post">Disconnect from Dropbox</a>
+        {% else %}
+        <a class="instruction-btn" href="{{ url_for('login') }}">
+            <img class="dropbox-logo" src="static/dropbox.png"/>
+            Login with Dropbox
+        </a>
+        {% endif %}
+    </div>
+</div>
+<div class="instruction-row">
+    <div class="instruction-num">
+        2.
+    </div>
+    <div class="instruction">
+        <div class="form-group">
+        <label for="kindle-name">Kindle username</label>
+        {% if kindle_name %}
+        <input type="text" id="kindle-name" name="kindle_name" class="form-control"
+            placeholder="{{ kindle_name }}">
+        {% else %}
+        <input type="text" id="kindle-name" name="kindle_name" class="form-control"
+            placeholder="Enter Kindle username (@kindle.com)">
+        {% endif %}
+        </div>
 
-  <div class="form-group">
-    <label for="kindle-name">Kindle username</label>
-    {% if kindle_name %}
-    <input type="text" id="kindle-name" name="kindle_name" class="form-control"
-        placeholder="{{ kindle_name }}">
-    {% else %}
-    <input type="text" id="kindle-name" name="kindle_name" class="form-control"
-        placeholder="Enter Kindle username (@kindle.com)">
-    {% endif %}
-  </div>
+        <div class="form-group">
+        <label for="Email">Email</label>
+        {% if email %}
+        <input type="email" id="email" name="email" class="form-control"
+        placeholder="{{ email }}">
+        {% else %}
+        <input type="email" id="email" name="email" class="form-control"
+            placeholder="Enter your email">
+        {% endif %}
+        </div>
 
-  <div class="form-group">
-    <label for="Email">Email</label>
-    {% if email %}
-    <input type="email" id="email" name="email" class="form-control"
-    placeholder="{{ email }}">
-    {% else %}
-    <input type="email" id="email" name="email" class="form-control"
-        placeholder="Enter your email">
-    {% endif %}
-  </div>
-
-  <input type="submit" class="btn btn-default" value="Login">
-
-  {% if active %}
-  <p>activated!
-  {% else %}
-  <p>Get a new emailer.
-  {% endif %}
+        <input type="submit" class="btn btn-default" value="Login">
+    </div>
+</div>
+<div class="instruction-row">
+    <div class="instruction-num">
+        3.
+    </div>
+    <div class="instruction">
+        {% if active %}
+        activated!
+        {% else %}
+        Get a new emailer.
+        {% endif %}
+    </div>
+</div>
 
 {% endblock %}
