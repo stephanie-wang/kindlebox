@@ -12,6 +12,7 @@ from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 import constants
 from kindlebox import emailer, kindleboxer
 from kindlebox.database import db
+from kindlebox.decorators import login_required_ajax
 from kindlebox.models import User
 from kindlebox.queue import queuefunc
 
@@ -41,14 +42,23 @@ except OSError:
 
 @app.route('/')
 def home():
-    if 'user' not in session:
-        return redirect(url_for('login'))
-    kindle_name = session['user']
-    user = User.query.filter_by(kindle_name=kindle_name).first()
+    dropbox_id = session.get('dropbox_id')
+    user = User.query.filter_by(dropbox_id=dropbox_id).first()
+
+    logged_in = dropbox_id is not None and user is not None
+    kindle_name = ''
+    email = ''
+    active = False
+    if logged_in:
+        kindle_name = user.kindle_name
+        email = user.email
+        active = user.active
+
     response = {
+            'logged_in': logged_in,
             'kindle_name': kindle_name,
-            'linked': user.access_token is not None,
-            'active': user.active,
+            'email': email,
+            'active': active,
             }
     # TODO: Display option to activate if user has a token and an
     # emailer set
@@ -57,36 +67,52 @@ def home():
     return render_template('index.html', **response)
 
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/set-user-info', methods=['POST'])
+@login_required_ajax
+def set_user_info(dropbox_id):
+    response = {
+            'success': False,
+            }
+
+    user = User.query.filter_by(dropbox_id=dropbox_id).first()
+    kindle_name = request.form.get('kindle_name')
+    email = request.form.get('email')
+    modified = False
+
+    if kindle_name is not None:
+        user.kindle_name = kindle_name
+        modified = True
+
+    if email is not None:
+        # If this is the first time we're setting the email address, send it
+        # the emailer.
+        is_first_email = user.email is None
+        user.email = email
+        if is_first_email:
+            _new_emailer(dropbox_id)
+        modified = True
+
+    if modified:
+        db.commit()
+
+    response['success'] = True
+    return jsonify(response)
+
+
+@app.route('/login')
 def login():
-    if 'user' in session:
-        return redirect(url_for('home'))
-    error = None
-    if request.method == 'POST':
-        kindle_name = request.form.get('kindle_name')
-        email = request.form.get('email')
+    #_logout()
+    return redirect(get_auth_flow().start())
 
-        if kindle_name is not None and email is not None:
-            session['user'] = kindle_name
-            session['email'] = email
-            user = User.query.filter_by(kindle_name=kindle_name).first()
-            if user is not None:
-                return redirect(url_for('home'))
 
-            new_user = User(kindle_name, email)
-            db.add(new_user)
-            payload = user.set_new_emailer()
-            db.commit()
-            send_activate_email(user)
-            return redirect(url_for('dropbox_auth_start'))
-
-    return render_template('login.html', error=error)
+def _logout():
+    # TODO: clear any other session args
+    session.pop('dropbox_id', None)
 
 
 @app.route('/logout')
 def logout():
-    session.pop('user', None)
-    session.pop('email', None)
+    _logout()
     return redirect(url_for('home'))
 
 
@@ -116,13 +142,14 @@ def activate_user(payload):
 
 
 @app.route('/new-emailer', methods=['POST'])
-def new_emailer():
-    if 'user' not in session:
-        return redirect(url_for('login'))
+@login_required_ajax
+def new_emailer(dropbox_id):
+    _new_emailer(dropbox_id)
+    return redirect(url_for('home'))
 
-    kindle_name = session.get('user')
+def _new_emailer(dropbox_id):
     try:
-        user = User.query.filter_by(kindle_name=kindle_name).one()
+        user = User.query.filter_by(dropbox_id=dropbox_id).one()
     except NoResultFound:
         # TODO: log
         abort(404)
@@ -132,7 +159,7 @@ def new_emailer():
         # TODO: log
         abort(404)
 
-    payload = user.set_new_emailer()
+    user.set_new_emailer()
     db.commit()
     try:
         send_activate_email(user)
@@ -141,14 +168,13 @@ def new_emailer():
         # block on this for now.
         pass
 
-    return redirect(url_for('home'))
-
 
 @app.route('/dropbox-auth-finish')
 def dropbox_auth_finish():
-    kindle_name = session.get('user')
-    if kindle_name is None:
-        abort(403)
+    """
+    Finish Dropbox auth. If successful, user is now logged in. If the dropbox
+    ID is new, register a new user.
+    """
     try:
         access_token, dropbox_id, url_state = get_auth_flow().finish(request.args)
     except DropboxOAuth2Flow.BadRequestException, e:
@@ -164,29 +190,31 @@ def dropbox_auth_finish():
         app.logger.exception("Auth error" + e)
         abort(403)
 
-    user = User.query.filter_by(kindle_name=kindle_name).first()
+    user = User.query.filter_by(dropbox_id=dropbox_id).first()
+    if user is None:
+        user = User(dropbox_id)
+        db.add(user)
+
     user.access_token = access_token
-    user.dropbox_id = dropbox_id
     db.commit()
+
+    session['dropbox_id'] = user.dropbox_id
+
     return redirect(url_for('home'))
-
-
-@app.route('/dropbox-auth-start')
-def dropbox_auth_start():
-    if 'user' not in session:
-        abort(403)
-    return redirect(get_auth_flow().start())
 
 
 @app.route('/dropbox-unlink')
 def dropbox_unlink():
-    kindle_name = session.get('user')
-    if kindle_name is None:
+    dropbox_id = session.get('dropbox_id')
+    if dropbox_id is None:
         abort(403)
-    user = User.query.filter_by(kindle_name=kindle_name).first()
+
+    user = User.query.filter_by(dropbox_id=dropbox_id).first()
     for attribute in ['active', 'access_token', 'cursor']:
         setattr(user, attribute, None)
     db.commit()
+
+    _logout()
 
     return redirect(url_for('home'))
 

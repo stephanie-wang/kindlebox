@@ -1,16 +1,39 @@
 {% extends "base.html" %}
 {% block body %}
-    <p>Welcome {{ kindle_name }}!
-
-    {% if linked %}
-    <p><a href="{{ url_for('dropbox_unlink') }} " method="post">Unlink</a>
+    {% if logged_in %}
+    <p><a href="{{ url_for('dropbox_unlink') }} " method="post">Disconnect from Dropbox</a>
     {% else %}
-    <a href="{{ url_for('dropbox_auth_start') }}">Link</a>
+    <a href="{{ url_for('login') }}">Login with Dropbox</a>
     {% endif %}
 
-    {% if active %}
-    <p>activated!
+  <div class="form-group">
+    <label for="kindle-name">Kindle username</label>
+    {% if kindle_name %}
+    <input type="text" id="kindle-name" name="kindle_name" class="form-control"
+        placeholder="{{ kindle_name }}">
     {% else %}
-    <p>womp not active
+    <input type="text" id="kindle-name" name="kindle_name" class="form-control"
+        placeholder="Enter Kindle username (@kindle.com)">
     {% endif %}
+  </div>
+
+  <div class="form-group">
+    <label for="Email">Email</label>
+    {% if email %}
+    <input type="email" id="email" name="email" class="form-control"
+    placeholder="{{ email }}">
+    {% else %}
+    <input type="email" id="email" name="email" class="form-control"
+        placeholder="Enter your email">
+    {% endif %}
+  </div>
+
+  <input type="submit" class="btn btn-default" value="Login">
+
+  {% if active %}
+  <p>activated!
+  {% else %}
+  <p>Get a new emailer.
+  {% endif %}
+
 {% endblock %}
