@@ -199,7 +199,6 @@ def dropbox_auth_finish():
         db.add(user)
 
     user.access_token = access_token
-    print user.dropbox_id, access_token
     db.commit()
 
     session['dropbox_id'] = user.dropbox_id
