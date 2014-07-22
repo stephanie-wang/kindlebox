@@ -11,3 +11,5 @@ itsdangerous==0.24
 redis==2.10.1
 urllib3==1.8.2
 wsgiref==0.1.2
+psycopg2==2.5.3
+simplejson==3.6.0

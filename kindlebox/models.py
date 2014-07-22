@@ -14,13 +14,12 @@ class User(Base):
     email = Column(String(120), unique=True)
     emailer = Column(String(120), unique=True)
     active = Column(Boolean)
-    access_token = Column(LargeBinary)
+    access_token = Column(Text)
     cursor = Column(Text)
     books = relationship('Book', backref='user', lazy='dynamic')
 
-    def __init__(self, kindle_name, email):
-        self.kindle_name = kindle_name
-        self.email = email
+    def __init__(self, dropbox_id):
+        self.dropbox_id = dropbox_id
 
     def activate(self):
         self.active = True

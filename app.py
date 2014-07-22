@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
-from dropbox.client import DropboxOAuth2Flow
-from flask import Flask, request, session, redirect, url_for, abort, \
-    render_template, flash
-from flask.ext.sqlalchemy import SQLAlchemy
+import simplejson as json
 import hashlib
 import hmac
-from itsdangerous import URLSafeSerializer, BadSignature
 import os
+
+from dropbox.client import DropboxOAuth2Flow
+from flask import Flask, request, session, redirect, url_for, abort, \
+    render_template, flash, jsonify
+from itsdangerous import URLSafeSerializer, BadSignature
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from kindlebox import emailer, kindleboxer
@@ -55,11 +56,11 @@ def home():
         active = user.active
 
     response = {
-            'logged_in': logged_in,
-            'kindle_name': kindle_name,
-            'email': email,
-            'active': active,
-            }
+        'logged_in': logged_in,
+        'kindle_name': kindle_name,
+        'email': email,
+        'active': active,
+        }
     # TODO: Display option to activate if user has a token and an
     # emailer set
     # TODO: Link to get a new emailer
@@ -71,8 +72,8 @@ def home():
 @login_required_ajax
 def set_user_info(dropbox_id):
     response = {
-            'success': False,
-            }
+        'success': False,
+        }
 
     user = User.query.filter_by(dropbox_id=dropbox_id).first()
     kindle_name = request.form.get('kindle_name')
@@ -101,7 +102,7 @@ def set_user_info(dropbox_id):
 
 @app.route('/login')
 def login():
-    #_logout()
+    # _logout()
     return redirect(get_auth_flow().start())
 
 
@@ -147,6 +148,7 @@ def new_emailer(dropbox_id):
     _new_emailer(dropbox_id)
     return redirect(url_for('home'))
 
+
 def _new_emailer(dropbox_id):
     try:
         user = User.query.filter_by(dropbox_id=dropbox_id).one()
@@ -176,7 +178,8 @@ def dropbox_auth_finish():
     ID is new, register a new user.
     """
     try:
-        access_token, dropbox_id, url_state = get_auth_flow().finish(request.args)
+        access_token, dropbox_id, url_state = (get_auth_flow().
+                                               finish(request.args))
     except DropboxOAuth2Flow.BadRequestException, e:
         abort(400)
     except DropboxOAuth2Flow.BadStateException, e:
@@ -196,6 +199,7 @@ def dropbox_auth_finish():
         db.add(user)
 
     user.access_token = access_token
+    print user.dropbox_id, access_token
     db.commit()
 
     session['dropbox_id'] = user.dropbox_id
@@ -253,9 +257,9 @@ def get_serializer(secret_key=None):
 
 def send_activate_email(user):
     payload = {
-            'id': user.id,
-            'emailer': user.emailer,
-            }
+        'id': user.id,
+        'emailer': user.emailer,
+        }
     s = get_serializer()
     payload = s.dumps(payload)
     emailer.send_mail(user.emailer, user.email, 'subscribe',
