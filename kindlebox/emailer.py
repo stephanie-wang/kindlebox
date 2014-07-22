@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 import smtplib
-import constants
+import settings
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEBase import MIMEBase
 from email.MIMEText import MIMEText
 from email.Utils import COMMASPACE, formatdate
 from email import Encoders
 
-EMAILER_ADDRESS = constants.EMAILER_ADDRESS
-EMAILER_PASSWORD = constants.EMAILER_PASSWORD
-#KINDLE_USER = [constants.KINDLE_USER]
+EMAILER_ADDRESS = settings.EMAILER_ADDRESS
+EMAILER_PASSWORD = settings.EMAILER_PASSWORD
+#KINDLE_USER = [settings.KINDLE_USER]
 
 def send_mail(send_from, send_to, subject, text, files=[], server='smtp.gmail.com'):
   assert type(send_to)!=list
