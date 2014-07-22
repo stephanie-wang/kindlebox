@@ -9,24 +9,24 @@ from itsdangerous import URLSafeSerializer, BadSignature
 import os
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
-import constants
 from kindlebox import emailer, kindleboxer
 from kindlebox.database import db
 from kindlebox.decorators import login_required_ajax
 from kindlebox.models import User
 from kindlebox.queue import queuefunc
+import settings
 
 
-DEBUG = True
-SECRET_KEY = constants.SECRET_KEY
+DEBUG = settings.DEBUG
+SECRET_KEY = settings.SECRET_KEY
 SUBSCRIPTION_MESSAGE = '''
 Yay kindlebox.
 Here's your email: %s
 Here's your link: %s
 '''
 
-DROPBOX_APP_KEY = constants.DROPBOX_APP_KEY
-DROPBOX_APP_SECRET = constants.DROPBOX_APP_SECRET
+DROPBOX_APP_KEY = settings.DROPBOX_APP_KEY
+DROPBOX_APP_SECRET = settings.DROPBOX_APP_SECRET
 
 app = Flask(__name__)
 app.config.from_object(__name__)
