@@ -24,7 +24,6 @@ body {
     float: left;
     width: 100%;
     padding: 30px;
-    margin-bottom: 20px;
     min-height: 108px;
 }
 
@@ -33,6 +32,7 @@ body {
     float: left;
     margin-right: 10%;
     width: 10%;
+    cursor: default;
 }
 
 .instruction {
@@ -47,12 +47,22 @@ body {
 .instruction-action {
     padding-left: 15px;
     border-radius: 2px;
-    border: solid #eee 1px;
+    border: solid #ddd 1px;
     cursor: pointer;
 }
 .instruction-action:hover {
-    border: solid #ccc 1px;
+    border: solid #bbb 1px;
     box-shadow: 0px 1px 2px 1px #eee;
+}
+
+#logo {
+    color: #eee;
+    cursor: default;
+}
+
+pre {
+    cursor: pointer;
+    margin: 10px 0;
 }
 
 #user-info-form {
