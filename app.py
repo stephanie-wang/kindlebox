@@ -50,16 +50,19 @@ def home():
     kindle_name = ''
     email = ''
     active = False
+    emailer = ''
     if logged_in:
         kindle_name = user.kindle_name
         email = user.email
         active = user.active
+        emailer = user.emailer
 
     response = {
         'logged_in': logged_in,
         'kindle_name': kindle_name,
         'email': email,
         'active': active,
+        'emailer': emailer,
         }
     # TODO: Display option to activate if user has a token and an
     # emailer set
@@ -163,12 +166,6 @@ def _new_emailer(dropbox_id):
 
     user.set_new_emailer()
     db.commit()
-    try:
-        send_activate_email(user)
-    except:
-        # TODO: log, check what exceptions emailer can throw. Don't want to
-        # block on this for now.
-        pass
 
 
 @app.route('/dropbox-auth-finish')

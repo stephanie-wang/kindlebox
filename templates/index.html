@@ -4,23 +4,27 @@
     <div class="instruction-num">
         1.
     </div>
-    <div class="instruction">
-        {% if logged_in %}
-        <a href="{{ url_for('dropbox_unlink') }} " method="post">Disconnect from Dropbox</a>
-        {% else %}
+    {% if logged_in %}
+        <a href="{{ url_for('dropbox_unlink') }} " method="post">
+    {% else %}
         <a class="instruction-btn" href="{{ url_for('login') }}">
+    {% endif %}
+    <div class="instruction instruction-action">
             <img class="dropbox-logo" src="static/dropbox.png"/>
+        {% if logged_in %}
+            Disconnect from Dropbox
+        {% else %}
             Login with Dropbox
-        </a>
         {% endif %}
     </div>
+    </a>
 </div>
 <div class="instruction-row">
     <div class="instruction-num">
         2.
     </div>
     <div class="instruction">
-        <form action="{{ url_for('set_user_info') }}" method=post>
+        <form id="user-info-form" action="{{ url_for('set_user_info') }}" method=post>
             <div class="form-group">
             <label for="kindle-name">Kindle username</label>
             {% if kindle_name %}
@@ -43,7 +47,7 @@
             {% endif %}
             </div>
 
-            <input type="submit" class="btn btn-default" value="Login">
+            <input type="submit" class="btn btn-default" value="Save">
         </form>
     </div>
 </div>
@@ -52,11 +56,11 @@
         3.
     </div>
     <div class="instruction">
-        {% if active %}
-        activated!
-        {% else %}
-        Get a new emailer.
+        {% if emailer %}
+            Your Kindlebox emailer is: 
+            <pre>{{ emailer }}</pre>
         {% endif %}
+        Or, get a different emailer.
     </div>
 </div>
 
