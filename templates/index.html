@@ -12,7 +12,7 @@
     <div class="instruction instruction-action">
             <img class="dropbox-logo" src="static/dropbox.png"/>
         {% if logged_in %}
-            Disconnect from Dropbox
+            Logout from Dropbox
         {% else %}
             Login with Dropbox
         {% endif %}
@@ -26,7 +26,6 @@
     <div class="instruction">
         <form id="user-info-form" action="{{ url_for('set_user_info') }}" method=post>
             <div class="form-group">
-            <label for="kindle-name">Kindle username</label>
             {% if kindle_name %}
             <input type="text" id="kindle-name" name="kindle_name" class="form-control"
                 placeholder="{{ kindle_name }}">
@@ -37,7 +36,6 @@
             </div>
 
             <div class="form-group">
-            <label for="Email">Email</label>
             {% if email %}
             <input type="email" id="email" name="email" class="form-control"
             placeholder="{{ email }}">
