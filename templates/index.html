@@ -58,7 +58,8 @@
             Your Kindlebox emailer is: 
             <pre class="instruction-action">{{ emailer }}</pre>
         {% endif %}
-        Or, get a different emailer.
+        Or,
+        <a href="{{ url_for('new_emailer') }} " method="post">get a new emailer</a>.
     </div>
 </div>
 
