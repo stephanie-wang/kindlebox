@@ -11,11 +11,11 @@
     {% endif %}
     <div class="instruction instruction-action">
             <img class="dropbox-logo" src="static/dropbox.png"/>
-        {% if logged_in %}
-            Logout from Dropbox
-        {% else %}
-            Login with Dropbox
-        {% endif %}
+            {% if logged_in %}
+                Logout from Dropbox
+            {% else %}
+                Login with Dropbox
+            {% endif %}
     </div>
     </a>
 </div>
