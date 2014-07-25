@@ -4,20 +4,20 @@
     <div class="instruction-num">
         1.
     </div>
-    {% if logged_in %}
-        <a href="{{ url_for('dropbox_unlink') }} " method="post">
-    {% else %}
-        <a class="instruction-btn" href="{{ url_for('login') }}">
-    {% endif %}
-    <div class="instruction instruction-action">
-            <img class="dropbox-logo" src="static/dropbox.png"/>
-            {% if logged_in %}
-                Logout from Dropbox
-            {% else %}
-                Login with Dropbox
-            {% endif %}
+    <div class="instruction instruction-action dropbox-action">
+        {% if logged_in %}
+            <a href="{{ url_for('dropbox_unlink') }} " method="post">
+        {% else %}
+            <a class="instruction-btn" href="{{ url_for('login') }}">
+        {% endif %}
+        <img class="dropbox-logo" src="static/dropbox.png"/>
+        {% if logged_in %}
+            Logout from Dropbox
+        {% else %}
+            Login with Dropbox
+        {% endif %}
+        </a>
     </div>
-    </a>
 </div>
 <div class="instruction-row">
     <div class="instruction-num">
@@ -27,20 +27,20 @@
         <form id="user-info-form" action="{{ url_for('set_user_info') }}" method=post>
             <div class="form-group">
             {% if kindle_name %}
-            <input type="text" id="kindle-name" name="kindle_name" class="form-control"
+            <input type="text" id="kindle-name" name="kindle_name" class="form-control form-input instruction-action"
                 placeholder="{{ kindle_name }}">
             {% else %}
-            <input type="text" id="kindle-name" name="kindle_name" class="form-control"
+            <input type="text" id="kindle-name" name="kindle_name" class="form-control form-input instruction-action"
                 placeholder="Enter Kindle username (@kindle.com)">
             {% endif %}
             </div>
 
             <div class="form-group">
             {% if email %}
-            <input type="email" id="email" name="email" class="form-control"
+            <input type="email" id="email" name="email" class="form-control form-input instruction-action"
             placeholder="{{ email }}">
             {% else %}
-            <input type="email" id="email" name="email" class="form-control"
+            <input type="email" id="email" name="email" class="form-control form-input instruction-action"
                 placeholder="Enter your email">
             {% endif %}
             </div>
@@ -56,7 +56,7 @@
     <div class="instruction">
         {% if emailer %}
             Your Kindlebox emailer is: 
-            <pre>{{ emailer }}</pre>
+            <pre class="instruction-action">{{ emailer }}</pre>
         {% endif %}
         Or, get a different emailer.
     </div>
