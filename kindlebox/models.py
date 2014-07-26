@@ -11,6 +11,7 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     dropbox_id = Column(Integer)
     kindle_name = Column(String(80), unique=True)
+    # TODO: delete email.
     email = Column(String(120), unique=True)
     emailer = Column(String(120), unique=True)
     active = Column(Boolean)
