@@ -20,11 +20,6 @@ import settings
 
 DEBUG = settings.DEBUG
 SECRET_KEY = settings.SECRET_KEY
-SUBSCRIPTION_MESSAGE = '''
-Yay kindlebox.
-Here's your email: %s
-Here's your link: %s
-'''
 
 DROPBOX_APP_KEY = settings.DROPBOX_APP_KEY
 DROPBOX_APP_SECRET = settings.DROPBOX_APP_SECRET
@@ -75,8 +70,8 @@ def home():
 @login_required_ajax
 def set_user_info(dropbox_id):
     response = {
-            'success': False,
-            }
+        'success': False,
+        }
 
     user = User.query.filter_by(dropbox_id=dropbox_id).first()
     kindle_name = request.form.get('kindle_name')
@@ -109,29 +104,24 @@ def logout():
     return redirect(url_for('home'))
 
 
-@app.route('/activate/<payload>')
-def activate_user(payload):
-    s = get_serializer()
-    try:
-        user_info = s.loads(payload)
-    except BadSignature:
-        abort(404)
+@app.route('/activate', methods=['GET'])
+@login_required_ajax
+def activate_user(dropbox_id):
+    response = {
+        'success': False,
+        }
 
-    # Check that user ID and emailer address match.
     try:
-        user = User.query.filter_by(id=user_info.get('id')).one()
+        user = User.query.filter_by(dropbox_id=dropbox_id).one()
     except NoResultFound, MultipleResultsFound:
-        abort(404)
-    if user.emailer != user_info.get('emailer'):
-        # TODO: Error page if the emailer address is different now.
-        abort(404)
-    # TODO: Error page if user already active.
+        return jsonify(response)
 
     user.activate()
     db.commit()
     _process_user.delay(user.dropbox_id)
 
-    return redirect(url_for('home'))
+    response['success'] = True
+    return jsonify(response)
 
 
 @app.route('/dropbox-auth-finish')
@@ -209,26 +199,10 @@ def get_auth_flow():
     if DEBUG:
         redirect_uri = url_for('dropbox_auth_finish', _external=True)
     else:
-        redirect_uri = url_for('dropbox_auth_finish', _external=True, _scheme="https")
+        redirect_uri = url_for('dropbox_auth_finish', _external=True,
+                _scheme="https")
     return DropboxOAuth2Flow(DROPBOX_APP_KEY, DROPBOX_APP_SECRET, redirect_uri,
                              session, 'dropbox-auth-csrf-token')
-
-
-def get_serializer(secret_key=None):
-    if secret_key is None:
-        secret_key = SECRET_KEY
-    return URLSafeSerializer(secret_key)
-
-
-def send_activate_email(user):
-    payload = {
-        'id': user.id,
-        'emailer': user.emailer,
-        }
-    s = get_serializer()
-    payload = s.dumps(payload)
-    emailer.send_mail(user.emailer, user.email, 'subscribe',
-                      SUBSCRIPTION_MESSAGE % (user.emailer, payload))
 
 
 def main():
