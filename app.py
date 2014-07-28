@@ -100,6 +100,7 @@ def set_user_info(dropbox_id):
         db.commit()
 
     response['success'] = True
+    response['emailer'] = user.emailer
     return jsonify(response)
 
 

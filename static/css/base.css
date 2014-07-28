@@ -51,7 +51,17 @@ body {
     float: left;
     width: 100%;
     min-height: 108px;
-    margin-top: 20px;
+    margin-top: 5px;
+}
+
+.instruction-completed {
+    opacity: 0.4;
+}
+
+.instruction-action-inactive:focus, .instruction-action-inactive:hover {
+    border: solid #ddd 1px;
+    box-shadow: none;
+    cursor: default;
 }
 
 /* 1. Dropbox button */
@@ -76,9 +86,7 @@ body {
 
 .form-input {
     width: 100%;
-    background: none;
     border: solid #ddd 1px;
-    box-shadow: none;
     font-size: 18px;
     padding: 20px 10px !important;
 }
