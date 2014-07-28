@@ -5,8 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base
 import settings
 
 # TODO(sxwang): switch to postgres :(
-engine = create_engine(('postgresql://{USER}:{PASSWORD}@{URL}/{DATABASE}'
-    .format(**settings.DATABASE)), convert_unicode=True)
+engine = create_engine(settings.DATABASE_URL, convert_unicode=True)
 db = scoped_session(sessionmaker(autocommit=False,
                                          autoflush=False,
                                          bind=engine))
