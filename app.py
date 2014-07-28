@@ -75,32 +75,20 @@ def home():
 @login_required_ajax
 def set_user_info(dropbox_id):
     response = {
-        'success': False,
-        }
+            'success': False,
+            }
 
     user = User.query.filter_by(dropbox_id=dropbox_id).first()
     kindle_name = request.form.get('kindle_name')
-    email = request.form.get('email')
-    modified = False
 
     if kindle_name is not None:
+        if user.kindle_name is None:
+            user.set_new_emailer()
         user.kindle_name = kindle_name
-        modified = True
-
-    if email is not None:
-        # If this is the first time we're setting the email address, send it
-        # the emailer.
-        is_first_email = user.email is None
-        user.email = email
-        if is_first_email:
-            _new_emailer(dropbox_id)
-        modified = True
-
-    if modified:
         db.commit()
+        response['success'] = True
+        response['emailer'] = user.emailer
 
-    response['success'] = True
-    response['emailer'] = user.emailer
     return jsonify(response)
 
 
@@ -144,29 +132,6 @@ def activate_user(payload):
     _process_user.delay(user.dropbox_id)
 
     return redirect(url_for('home'))
-
-
-@app.route('/new-emailer', methods=['POST'])
-@login_required_ajax
-def new_emailer(dropbox_id):
-    _new_emailer(dropbox_id)
-    return redirect(url_for('home'))
-
-
-def _new_emailer(dropbox_id):
-    try:
-        user = User.query.filter_by(dropbox_id=dropbox_id).one()
-    except NoResultFound:
-        # TODO: log
-        abort(404)
-
-    # User should not be requesting a new emailer if already active.
-    if user.active:
-        # TODO: log
-        abort(404)
-
-    user.set_new_emailer()
-    db.commit()
 
 
 @app.route('/dropbox-auth-finish')
