@@ -16,8 +16,10 @@
       {% if logged_in %}
         instruction-action-inactive
       {% endif %}">
-    <img class="dropbox-logo" src="static/dropbox.png"/>
-      Login with Dropbox
+      <div class="instruction-action-content">
+        <img class="dropbox-logo" src="static/dropbox.png"/>
+          Login with Dropbox
+      </div>
     </div>
   </a>
 </div>
@@ -32,13 +34,14 @@
     </div>
     <div class="instruction">
       <form id="user-info-form">
-        <div class="form-group">
           <input type="text" id="kindle-name" name="kindle_name" class="form-control form-input instruction-action"
         {% if kindle_name %}
               value="{{ kindle_name }}">
         {% else %}
-              placeholder="kindle-username@kindle.com" autofocus>
+              placeholder="kindle username" autofocus>
         {% endif %}
+        <div id="kindle-com" class="pull-right">
+          @kindle.com
         </div>
       </form>
     </div>
