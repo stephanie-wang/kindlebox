@@ -21,7 +21,7 @@ function showEmailer(emailer) {
 $(function() {
   var kindleComWidth = $('#kindle-com').outerWidth();
   var formWidth = $('#user-info-form').innerWidth();
-  $('#kindle-name').width(formWidth - kindleComWidth - 40);
+  $('#kindle-name').width(formWidth - kindleComWidth - 45);
   // Show the emailer instruction after successfully submitting a Kindle
   // username.
   $('#user-info-form').submit(function(evt) {
