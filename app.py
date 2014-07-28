@@ -241,7 +241,10 @@ def _process_user(dropbox_id):
 
 
 def get_auth_flow():
-    redirect_uri = url_for('dropbox_auth_finish', _external=True)
+    if DEBUG:
+        redirect_uri = url_for('dropbox_auth_finish', _external=True)
+    else:
+        redirect_uri = url_for('dropbox_auth_finish', _external=True, _scheme="https")
     return DropboxOAuth2Flow(DROPBOX_APP_KEY, DROPBOX_APP_SECRET, redirect_uri,
                              session, 'dropbox-auth-csrf-token')
 
