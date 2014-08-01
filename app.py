@@ -104,7 +104,7 @@ def logout():
     return redirect(url_for('home'))
 
 
-@app.route('/activate', methods=['GET'])
+@app.route('/activate', methods=['POST'])
 @login_required_ajax
 def activate_user(dropbox_id):
     response = {
@@ -114,12 +114,17 @@ def activate_user(dropbox_id):
     try:
         user = User.query.filter_by(dropbox_id=dropbox_id).one()
     except NoResultFound, MultipleResultsFound:
+        # TODO: log
+        return jsonify(response)
+
+    try:
+        _process_user.delay(user.dropbox_id)
+    except:
+        # TODO: log
         return jsonify(response)
 
     user.activate()
     db.commit()
-    _process_user.delay(user.dropbox_id)
-
     response['success'] = True
     return jsonify(response)
 
