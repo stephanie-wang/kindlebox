@@ -4,8 +4,9 @@ import mimetypes
 import os.path
 
 from kindlebox import emailer
-from kindlebox.database import db
+#from kindlebox.database import db
 from kindlebox.models import User, Book
+from kindlebox.queue import queuefunc
 
 BOOK_MIMETYPES = set([
     'application/pdf',
@@ -48,7 +49,7 @@ def process_user(dropbox_id):
     # Save all books to the database.
     for book_path, book_hash in added_books:
         book = Book(user.id, book_path, book_hash)
-        db.add(book)
+        db_session.add(book)
         try:
             os.unlink(book_path)
         except OSError:
@@ -56,8 +57,8 @@ def process_user(dropbox_id):
                       book_path)
     for book_path in removed_books:
         book = user.books.filter_by(pathname=book_path).first()
-        db.delete(book)
-    db.commit()
+        db_session.delete(book)
+    db_session.commit()
 
 
 def get_added_books(delta_entries, client):

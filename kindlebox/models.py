@@ -1,23 +1,23 @@
-from sqlalchemy import *
-from sqlalchemy.orm import relationship
+from flask.ext.sqlalchemy import SQLAlchemy
 
-
-from kindlebox.database import Base
 from kindlebox.utils import get_random_string
 
 
-class User(Base):
+db = SQLAlchemy()
+
+
+class User(db.Model):
     __tablename__ = 'user'
-    id = Column(Integer, primary_key=True)
-    dropbox_id = Column(Integer)
-    kindle_name = Column(String(80), unique=True)
+    id = db.Column(db.Integer, primary_key=True)
+    dropbox_id = db.Column(db.Integer)
+    kindle_name = db.Column(db.String(80), unique=True)
     # TODO: delete email.
-    email = Column(String(120), unique=True)
-    emailer = Column(String(120), unique=True)
-    active = Column(Boolean)
-    access_token = Column(Text)
-    cursor = Column(Text)
-    books = relationship('Book', backref='user', lazy='dynamic')
+    email = db.Column(db.String(120), unique=True)
+    emailer = db.Column(db.String(120), unique=True)
+    active = db.Column(db.Boolean)
+    access_token = db.Column(db.Text)
+    cursor = db.Column(db.Text)
+    books = db.relationship('Book', backref='user', lazy='dynamic')
 
     def __init__(self, dropbox_id):
         self.dropbox_id = dropbox_id
@@ -31,12 +31,12 @@ class User(Base):
         self.emailer = emailer_address
 
 
-class Book(Base):
+class Book(db.Model):
     __tablename__ = 'book'
-    id = Column(Integer, primary_key=True)
-    book_hash = Column(Integer)
-    pathname = Column(Text)
-    user_id = Column(Integer, ForeignKey('user.id'))
+    id = db.Column(db.Integer, primary_key=True)
+    book_hash = db.Column(db.Integer)
+    pathname = db.Column(db.Text)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
     def __init__(self, user_id, pathname, book_hash):
         self.user_id = user_id

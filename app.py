@@ -2,17 +2,17 @@
 import simplejson as json
 import hashlib
 import hmac
-import os
 
 from dropbox.client import DropboxOAuth2Flow
 from flask import Flask, request, session, redirect, url_for, abort, \
     render_template, flash, jsonify
-from itsdangerous import URLSafeSerializer, BadSignature
+from flask.ext.script import Manager
+from flask.ext.migrate import Migrate, MigrateCommand
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
-from kindlebox import emailer, kindleboxer
-from kindlebox.database import db
+from kindlebox import emailer
 from kindlebox.decorators import login_required_ajax
+from kindlebox.kindleboxer import process_user
 from kindlebox.models import User
 from kindlebox.queue import queuefunc
 import settings
@@ -24,16 +24,21 @@ SECRET_KEY = settings.SECRET_KEY
 DROPBOX_APP_KEY = settings.DROPBOX_APP_KEY
 DROPBOX_APP_SECRET = settings.DROPBOX_APP_SECRET
 
-app = Flask(__name__)
-app.config.from_object(__name__)
-app.config.from_envvar('FLASKR_SETTINGS', silent=True)
-app.config['REDIS_QUEUE_KEY'] = 'dropbox_delta_users'
 
-# Ensure instance directory exists.
-try:
-    os.makedirs(app.instance_path)
-except OSError:
-    pass
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(__name__)
+    app.config.from_envvar('FLASKR_SETTINGS', silent=True)
+    app.config['REDIS_QUEUE_KEY'] = 'dropbox_delta_users'
+    app.config['SQLALCHEMY_DATABASE_URI'] = settings.DATABASE_URL
+
+    from kindlebox.models import db
+    db.init_app(app)
+    db.create_all(app=app)
+    return app, db
+
+
+app, db = create_app()
 
 
 @app.route('/')
@@ -59,10 +64,6 @@ def home():
         'active': active,
         'emailer': emailer,
         }
-    # TODO: Display option to activate if user has a token and an
-    # emailer set
-    # TODO: Link to get a new emailer
-    # TODO: Form to reset email address
     return render_template('index.html', **response)
 
 
@@ -80,7 +81,7 @@ def set_user_info(dropbox_id):
         if user.kindle_name is None:
             user.set_new_emailer()
         user.kindle_name = kindle_name
-        db.commit()
+        db.session.commit()
         response['success'] = True
         response['emailer'] = user.emailer
 
@@ -124,7 +125,7 @@ def activate_user(dropbox_id):
         return jsonify(response)
 
     user.activate()
-    db.commit()
+    db.session.commit()
     response['success'] = True
     return jsonify(response)
 
@@ -154,10 +155,10 @@ def dropbox_auth_finish():
     user = User.query.filter_by(dropbox_id=dropbox_id).first()
     if user is None:
         user = User(dropbox_id)
-        db.add(user)
+        db.session.add(user)
 
     user.access_token = access_token
-    db.commit()
+    db.session.commit()
 
     session['dropbox_id'] = user.dropbox_id
 
@@ -197,7 +198,7 @@ def verify():
 
 @queuefunc
 def _process_user(dropbox_id):
-    kindleboxer.process_user(dropbox_id)
+    process_user(dropbox_id, db.session)
 
 
 def get_auth_flow():
@@ -211,9 +212,9 @@ def get_auth_flow():
 
 
 def main():
-    # TODO: start a thread to read from users queue
-    from kindlebox.database import init_db
-    init_db()
+    migrate = Migrate(app, db)
+    manager = Manager(app)
+    manager.add_command('db', MigrateCommand)
     app.run()
 
 if __name__ == '__main__':
