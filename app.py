@@ -174,7 +174,7 @@ def dropbox_unlink():
     user = User.query.filter_by(dropbox_id=dropbox_id).first()
     for attribute in ['active', 'access_token', 'cursor']:
         setattr(user, attribute, None)
-    db.commit()
+    db.session.commit()
 
     _logout()
 
