@@ -119,7 +119,7 @@ def activate_user(dropbox_id):
         return jsonify(response)
 
     try:
-        _process_user.delay(user.dropbox_id)
+        _process_user(user.dropbox_id)
     except:
         # TODO: log
         return jsonify(response)
@@ -196,9 +196,8 @@ def verify():
     return ''
 
 
-@queuefunc
 def _process_user(dropbox_id):
-    process_user(dropbox_id, db.session)
+    process_user.delay(dropbox_id)
 
 
 def get_auth_flow():

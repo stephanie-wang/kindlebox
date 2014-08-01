@@ -17,6 +17,7 @@ BOOK_MIMETYPES = set([
     ])
 
 
+@queuefunc
 def process_user(dropbox_id):
     user = User.query.filter_by(dropbox_id=dropbox_id).first()
     if not user.active:
