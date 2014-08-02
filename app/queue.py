@@ -1,7 +1,9 @@
-from flask import current_app
-from pickle import loads
-from redis import Redis
+from pickle import dumps
 from uuid import uuid4
+
+from flask import current_app
+
+from redis import Redis
 
 
 redis = Redis()

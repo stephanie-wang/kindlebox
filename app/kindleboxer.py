@@ -20,9 +20,9 @@ BOOK_MIMETYPES = {
 
 
 @queuefunc
-def process_user(dropbox_id):
-    user = User.query.filter_by(dropbox_id=dropbox_id).first()
-    if not user.active:
+def kindlebox(dropbox_id):
+    user = User.query.filter_by(dropbox_id=dropbox_id, active=True).first()
+    if user is None:
         return
 
     client = DropboxClient(user.access_token)

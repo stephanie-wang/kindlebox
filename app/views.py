@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-from app import app
-from app import db
-
 import simplejson as json
 import hashlib
 import hmac
@@ -11,8 +8,10 @@ from flask import request, session, redirect, url_for, abort, \
     render_template, flash, jsonify
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
+from app import app
+from app import db
 from app.decorators import login_required_ajax
-from app.kindleboxer import process_user
+from app.kindleboxer import kindlebox
 from app.models import User
 
 
@@ -29,19 +28,16 @@ def home():
 
     logged_in = dropbox_id is not None and user is not None
     kindle_name = ''
-    email = ''
     active = False
     emailer = ''
     if logged_in:
         kindle_name = user.kindle_name
-        email = user.email
         active = user.active
         emailer = user.emailer
 
     response = {
         'logged_in': logged_in,
         'kindle_name': kindle_name,
-        'email': email,
         'active': active,
         'emailer': emailer,
         }
@@ -100,7 +96,7 @@ def activate_user(dropbox_id):
         return jsonify(response)
 
     try:
-        _process_user(user.dropbox_id)
+        kindlebox.delay(dropbox_id)
     except:
         # TODO: log
         return jsonify(response)
@@ -162,7 +158,7 @@ def dropbox_unlink():
     return redirect(url_for('home'))
 
 
-@app.route('/dropbox-webhook', methods=['GET'])
+@app.route('/dropbox-webhook', methods=['GET', 'POST'])
 def verify():
     if request.method != 'POST':
         return request.args.get('challenge')
@@ -175,10 +171,6 @@ def verify():
         _process_user.delay(dropbox_id)
 
     return ''
-
-
-def _process_user(dropbox_id):
-    process_user.delay(dropbox_id)
 
 
 def get_auth_flow():

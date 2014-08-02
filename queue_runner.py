@@ -3,7 +3,8 @@ from pickle import loads, dumps
 from redis import Redis
 
 from app import app
-from kindlebox.kindleboxer import process_user
+from app import log
+from app.kindleboxer import kindlebox
 
 redis = Redis()
 
@@ -11,7 +12,6 @@ def queue_daemon(app, rv_ttl=500):
     while 1:
         msg = redis.blpop(app.config['REDIS_QUEUE_KEY'])
         func, key, args, kwargs = loads(msg[1])
-        print func
         try:
             rv = func(*args, **kwargs)
         except Exception, e:
