@@ -3,14 +3,28 @@
   font-family: 'Arvo';
   font-style: normal;
   font-weight: 400;
-  src: local('Arvo'), url(../fonts/arvo.woff) format('woff');
+  src: local('Arvo'), url(../fonts/arvo.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Arvo';
+  font-style: normal;
+  font-weight: 700;
+  src: local('Arvo Bold'), local('Arvo-Bold'), url(../fonts/arvo-bold.woff2) format('woff2');
 }
 
 @font-face {
   font-family: 'Droid Serif';
   font-style: normal;
   font-weight: 400;
-  src: local('Droid Serif'), url(../fonts/droidserif.woff) format('woff');
+  src: local('Droid Serif'), local('DroidSerif'), url(../fonts/droidserif.woff) format('woff');
+}
+
+@font-face {
+  font-family: 'Droid Serif';
+  font-style: normal;
+  font-weight: 700;
+  src: local('Droid Serif Bold'), local('DroidSerif-Bold'), url(../fonts/droidserif-bold.woff) format('woff');
 }
 
 a:hover {
