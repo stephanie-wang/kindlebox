@@ -1,20 +1,22 @@
-from dropbox.client import DropboxClient
-import md5
-import mimetypes
+import hashlib
 import os.path
 
-from kindlebox import emailer
-#from kindlebox.database import db
-from kindlebox.models import User, Book
-from kindlebox.queue import queuefunc
+from dropbox.client import DropboxClient
 
-BOOK_MIMETYPES = set([
+from app import db
+from app import emailer
+from app import log
+from app.models import User, Book
+from app.queue import queuefunc
+
+
+BOOK_MIMETYPES = {
     'application/pdf',
     'application/x-mobipocket-ebook',
     'application/epub+zip',
     'application/vnd.amazon.ebook',
     'text/plain',
-    ])
+    }
 
 
 @queuefunc
@@ -39,8 +41,7 @@ def process_user(dropbox_id):
 
     # Email ze books.
     email_from = user.emailer
-    #email_to = user.kindle_name + '@kindle.com'
-    email_to = user.email
+    email_to = user.kindle_name + '@kindle.com'
     for i in range(len(emailed_books) / 25):
         books = emailed_books[i * 25:(i+1) * 25]
         emailer.send_email(email_from, email_to, 'convert', '', books)
@@ -50,7 +51,7 @@ def process_user(dropbox_id):
     # Save all books to the database.
     for book_path, book_hash in added_books:
         book = Book(user.id, book_path, book_hash)
-        db_session.add(book)
+        db.session.add(book)
         try:
             os.unlink(book_path)
         except OSError:
@@ -58,8 +59,8 @@ def process_user(dropbox_id):
                       book_path)
     for book_path in removed_books:
         book = user.books.filter_by(pathname=book_path).first()
-        db_session.delete(book)
-    db_session.commit()
+        db.session.delete(book)
+    db.session.commit()
 
 
 def get_added_books(delta_entries, client):
@@ -95,7 +96,7 @@ def download_book(client, book_path):
 
     md5 = hashlib.md5()
     with open(book_path, 'w') as tmp_book:
-        with client.get_file(book) as book:
+        with client.get_file(book_path) as book:
             data = book.read()
             tmp_book.write(data)
             md5.update(data)

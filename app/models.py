@@ -1,9 +1,5 @@
-from flask.ext.sqlalchemy import SQLAlchemy
-
-from kindlebox.utils import get_random_string
-
-
-db = SQLAlchemy()
+from app import db
+from app.utils import get_random_string
 
 
 class User(db.Model):

@@ -1,44 +1,25 @@
 # -*- coding: utf-8 -*-
+from app import app
+from app import db
+
 import simplejson as json
 import hashlib
 import hmac
 
 from dropbox.client import DropboxOAuth2Flow
-from flask import Flask, request, session, redirect, url_for, abort, \
+from flask import request, session, redirect, url_for, abort, \
     render_template, flash, jsonify
-from flask.ext.script import Manager
-from flask.ext.migrate import Migrate, MigrateCommand
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
-from kindlebox import emailer
-from kindlebox.decorators import login_required_ajax
-from kindlebox.kindleboxer import process_user
-from kindlebox.models import User
-from kindlebox.queue import queuefunc
-import settings
+from app.decorators import login_required_ajax
+from app.kindleboxer import process_user
+from app.models import User
 
 
-DEBUG = settings.DEBUG
-SECRET_KEY = settings.SECRET_KEY
+DEBUG = app.config.get('DEBUG', False)
 
-DROPBOX_APP_KEY = settings.DROPBOX_APP_KEY
-DROPBOX_APP_SECRET = settings.DROPBOX_APP_SECRET
-
-
-def create_app():
-    app = Flask(__name__)
-    app.config.from_object(__name__)
-    app.config.from_envvar('FLASKR_SETTINGS', silent=True)
-    app.config['REDIS_QUEUE_KEY'] = 'dropbox_delta_users'
-    app.config['SQLALCHEMY_DATABASE_URI'] = settings.DATABASE_URL
-
-    from kindlebox.models import db
-    db.init_app(app)
-    db.create_all(app=app)
-    return app, db
-
-
-app, db = create_app()
+DROPBOX_APP_KEY = app.config.get('DROPBOX_APP_KEY', '')
+DROPBOX_APP_SECRET = app.config.get('DROPBOX_APP_SECRET', '')
 
 
 @app.route('/')
@@ -114,7 +95,7 @@ def activate_user(dropbox_id):
 
     try:
         user = User.query.filter_by(dropbox_id=dropbox_id).one()
-    except NoResultFound, MultipleResultsFound:
+    except (NoResultFound, MultipleResultsFound):
         # TODO: log
         return jsonify(response)
 
@@ -205,16 +186,6 @@ def get_auth_flow():
         redirect_uri = url_for('dropbox_auth_finish', _external=True)
     else:
         redirect_uri = url_for('dropbox_auth_finish', _external=True,
-                _scheme="https")
+                               _scheme="https")
     return DropboxOAuth2Flow(DROPBOX_APP_KEY, DROPBOX_APP_SECRET, redirect_uri,
                              session, 'dropbox-auth-csrf-token')
-
-
-def main():
-    migrate = Migrate(app, db)
-    manager = Manager(app)
-    manager.add_command('db', MigrateCommand)
-    app.run()
-
-if __name__ == '__main__':
-    main()
