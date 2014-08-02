@@ -1,3 +1,4 @@
+from flask import current_app
 from pickle import loads
 from redis import Redis
 from uuid import uuid4
