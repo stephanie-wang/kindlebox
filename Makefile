@@ -1,5 +1,8 @@
 .PHONY: pull, heroku
 
+default:
+	./run.py runserver
+
 pull:
 	git pull
 	@echo "\nInstalling virtualenv requirements...";
