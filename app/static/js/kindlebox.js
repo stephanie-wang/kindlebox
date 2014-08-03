@@ -14,8 +14,8 @@ function showEmailer(emailer) {
         </div> \
         <div id="emailer-text" class="instruction"> \
           Kindlebox works by emailing the books in your Dropbox folder to your Kindle. Here\'s your Kindlebox emailer: \
-          <pre class="instruction-action">' + emailer + '</pre> \
-          <p>To start receiving books through Kindlebox, visit <a href="https://www.amazon.com/manageyourkindle">Manage Your Content and Devices</a> at amazon.com. Go to the <b>Settings</b> tab, scroll down to <b>Personal Document Settings</b>, and add the above email address to your <b>Approved Personal Document E-mail List</b>.</p> \
+          <pre id="emailer" class="instruction-action">' + emailer + '</pre> \
+          <p>To start receiving books through Kindlebox, visit <a href="https://www.amazon.com/manageyourkindle" target="_blank">Manage Your Content and Devices</a> at amazon.com. Go to the <b>Settings</b> tab, scroll down to <b>Personal Document Settings</b>, and add the above email address to your <b>Approved Personal Document E-mail List</b>.</p> \
           <p>Finally, <a href="javascript: activate()">activate Kindlebox</a>.</p> \
         </div> \
       </div> \
@@ -58,5 +58,10 @@ $(function() {
     $('#kindle-name-instruction').removeClass('instruction-completed');
   }).blur(function() {
     $('#kindle-name-instruction').addClass('instruction-completed');
+  });
+
+
+  $('#emailer').click(function() {
+      $(this).selectText();
   });
 });
