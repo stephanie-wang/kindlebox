@@ -87,7 +87,7 @@ def _logout():
 @app.route('/logout')
 def logout():
     _logout()
-    return redirect(url_for('home'))
+    return redirect(url_for('home', redirect=True))
 
 
 @app.route('/activate', methods=['POST'])
@@ -108,13 +108,13 @@ def activate_user(dropbox_id):
 
     user.activate(active)
     db.session.commit()
+    response['success'] = True
     if active:
         try:
             kindlebox.delay(dropbox_id)
         except:
             # TODO: log
             return jsonify(response)
-    response['success'] = True
     return jsonify(response)
 
 
