@@ -1,0 +1,17 @@
+.center {
+    text-align: center;
+    width: 100%;
+}
+
+#dropbox-icon {
+    margin: 0 10px;
+}
+
+.icon {
+    width: 150px; 
+}
+
+#icon-container {
+    font-size: 72px;
+    margin: 50px 0;
+}

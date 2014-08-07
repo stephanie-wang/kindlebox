@@ -33,9 +33,10 @@ a:hover {
 
 body {
     font-family: 'Arvo', 'Droid Serif', serif;
+    font-size: 20px;
     padding-top: 50px;
-    background-image: url('../lightpaperfibers.png');
-    background-image: url('../ricepaper2.png');
+    background-image: url('../img/lightpaperfibers.png');
+    background-image: url('../img/ricepaper2.png');
     background-repeat: repeat;
 }
 
@@ -45,7 +46,6 @@ body {
 
 #logo {
     color: #eee;
-    cursor: default;
 }
 
 /* Base instruction styles */
@@ -54,7 +54,10 @@ body {
     width: 80%;
     padding: 20px 0px;
     margin-top: -5px;
-    font-size: 18px;
+}
+
+.instruction-btn {
+    cursor: pointer;
 }
 
 .instruction-action {
@@ -68,6 +71,7 @@ body {
 }
 
 .instruction-action-content {
+    text-align: center;
     width: 50%;
     margin: 0 auto;
 }
@@ -106,49 +110,13 @@ body {
     color: #428bca;
 }
 
-/* 1. Dropbox button */
-.dropbox-logo {
-    width: 32px;
-    height: 32px;
-    margin-right: 15px;
-    float: left;
+.start-stop {
+  width: 50%;
+  margin: 30px 25%;
+  color: white;
+  background-color: #428bca;
 }
 
-.dropbox-action {
-    padding-left: 15px;
-    line-height: 32px;
-    cursor: pointer;
-}
-
-/* 2. User kindle name and email form */
-#user-info-form {
-    margin: 0;
-}
-
-.form-input {
-    border: solid #ccc 1px;
-    font-size: 18px;
-    padding: 20px 10px !important;
-    float: left;
-}
-
-.form-input:focus {
-    box-shadow: 0px 1px 2px 1px #eee;
-    border: solid #bbb 1px;
-}
-
-#kindle-com {
-    float: left;
-    line-height: 40px;
-}
-
-/* 3. Emailer address */
-#emailer-text {
-    font-size: 16px;
-}
-
-pre {
-    cursor: pointer;
-    margin: 10px 0;
-    background: none;
+.start-stop:hover, .start-stop:focus {
+  background-color: #3A7EB9;
 }

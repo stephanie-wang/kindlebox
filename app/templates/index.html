@@ -1,5 +1,12 @@
 {% extends "base.html" %}
+
+{% block css %}
+    <link href="static/css/index.css" rel="stylesheet">
+{% endblock %}
+
 {% block body %}
+
+{% if not active %}
 <div class="instruction-row 
     {% if logged_in %}
       instruction-completed
@@ -17,7 +24,7 @@
         instruction-action-inactive
       {% endif %}">
       <div class="instruction-action-content">
-        <img class="dropbox-logo" src="static/dropbox.png"/>
+        <img class="dropbox-logo" src="static/img/dropbox.png"/>
           Login with Dropbox
       </div>
     </div>
@@ -48,13 +55,18 @@
   </div>
 
 {% endif %}
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
     <script type="text/javascript" src="static/js/kindlebox.js"></script>
-    {% if kindle_name %}
-    <script>
-      showEmailer('{{ emailer }}');
-    </script>
+    {% if active %}
+      <script>
+        showActivated();
+      </script>
+    {% elif kindle_name %}
+      <script>
+        showEmailer('{{ emailer }}');
+      </script>
     {% endif %}
 {% endblock %}

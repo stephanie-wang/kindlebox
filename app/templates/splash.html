@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block css %}
+  <link href="static/css/splash.css" rel="stylesheet">
+{% endblock %}
+{% block body %}
+
+<div class="center">
+  <div id="icon-container">
+    <img id="dropbox-icon" class="icon" src="static/img/dropbox_folder.png"/>
+    +
+    <img class="icon" src="static/img/kindle.png"/>
+  </div>
+<h1>
+  Kindlebox: Receive books on your Kindle through Dropbox.
+</h1>
+<a href="{{ url_for('home') }}?redirect=true" class="instruction-btn">
+  <div id="start" class="instruction instruction-action start-stop">
+    <div class="instruction-action-content">
+      Get Kindlebox
+    </div>
+  </div>
+</a>
+<p>
+Or, <a href="">learn more</a>.
+</p>
+</div>
+
+
+{% endblock %}

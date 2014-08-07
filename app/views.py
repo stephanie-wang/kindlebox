@@ -21,15 +21,23 @@ DROPBOX_APP_KEY = app.config.get('DROPBOX_APP_KEY', '')
 DROPBOX_APP_SECRET = app.config.get('DROPBOX_APP_SECRET', '')
 
 
+@app.route('/start')
+def splash():
+    return render_template('splash.html')
+
+
 @app.route('/')
 def home():
     dropbox_id = session.get('dropbox_id')
-    user = User.query.filter_by(dropbox_id=dropbox_id).first()
+    if dropbox_id is None and not request.args.get('redirect'):
+        return redirect(url_for('splash'))
 
-    logged_in = dropbox_id is not None and user is not None
     kindle_name = ''
     active = False
     emailer = ''
+
+    user = User.query.filter_by(dropbox_id=dropbox_id).first()
+    logged_in = dropbox_id is not None and user is not None
     if logged_in:
         kindle_name = user.kindle_name
         active = user.active
@@ -88,21 +96,24 @@ def activate_user(dropbox_id):
     response = {
         'success': False,
         }
-
     try:
-        user = User.query.filter_by(dropbox_id=dropbox_id).one()
-    except (NoResultFound, MultipleResultsFound):
-        # TODO: log
+        active = json.loads(request.form.get('active'))
+        assert type(active) == bool
+    except (json.JSONDecodeError, AssertionError):
         return jsonify(response)
 
-    try:
-        kindlebox.delay(dropbox_id)
-    except:
-        # TODO: log
+    user = User.query.filter_by(dropbox_id=dropbox_id).first()
+    if user is None:
         return jsonify(response)
 
-    user.activate()
+    user.activate(active)
     db.session.commit()
+    if active:
+        try:
+            kindlebox.delay(dropbox_id)
+        except:
+            # TODO: log
+            return jsonify(response)
     response['success'] = True
     return jsonify(response)
 
@@ -128,6 +139,10 @@ def dropbox_auth_finish():
     except DropboxOAuth2Flow.ProviderException, e:
         app.logger.exception("Auth error" + e)
         abort(403)
+
+    if dropbox_id is None:
+        # TODO: log?
+        return redirect(url_for('home'))
 
     user = User.query.filter_by(dropbox_id=dropbox_id).first()
     if user is None:

@@ -11,6 +11,7 @@
     <!-- Bootstrap core CSS -->
     <link href="static/css/bootstrap.min.css" rel="stylesheet">
     <link href="static/css/base.css" rel="stylesheet">
+    {% block css %}{% endblock %}
   </head>
 
   <body>
@@ -24,10 +25,10 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <div id="logo" class="navbar-brand">Kindlebox</div>
+          <a id="logo" class="navbar-brand" href="{{ url_for('home') }}">Kindlebox</a>
         </div>
         <div class="collapse navbar-collapse">
-          <ul class="nav navbar-nav">
+          <ul class="nav navbar-nav pull-right">
             {% if logged_in %}
             <li class="active"><a href="{{ url_for('logout') }}">Logout</a></li>
             {% endif %}
@@ -48,6 +49,7 @@
     <script type="text/javascript" src="static/js/lib/bootstrap.min.js"></script>
     <script type="text/javascript" src="static/js/base.js"></script>
     {% block scripts %}{% endblock %}
+    <script type="text/javascript" src="//s7.addthis.com/js/300/addthis_widget.js#pubid=ra-53dff2a46a9f9d7c"></script>
   
 
 </body>

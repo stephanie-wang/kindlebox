@@ -17,8 +17,8 @@ class User(db.Model):
     def __init__(self, dropbox_id):
         self.dropbox_id = dropbox_id
 
-    def activate(self):
-        self.active = True
+    def activate(self, active):
+        self.active = active
 
     def set_new_emailer(self):
         random_base = get_random_string()
