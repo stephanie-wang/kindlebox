@@ -11,5 +11,7 @@ $(function() {
       animate(i + 1, delay / 2)
     }, delay);
   }
-  animate(0, 128);
+  window.setTimeout(function() {
+    animate(0, 128);
+  }, 500);
 });
