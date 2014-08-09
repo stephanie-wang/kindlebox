@@ -3,14 +3,14 @@
   font-family: 'Arvo';
   font-style: normal;
   font-weight: 400;
-  src: local('Arvo'), url(../fonts/arvo.woff2) format('woff2');
+  src: local('Arvo'), url(../fonts/arvo.woff2) format('woff2'), url(../fonts/arvo.woff) format('woff');
 }
 
 @font-face {
   font-family: 'Arvo';
   font-style: normal;
   font-weight: 700;
-  src: local('Arvo Bold'), local('Arvo-Bold'), url(../fonts/arvo-bold.woff2) format('woff2');
+  src: local('Arvo Bold'), local('Arvo-Bold'), url(../fonts/arvo-bold.woff2) format('woff2'), url(../fonts/arvo-bold.woff) format('woff');
 }
 
 @font-face {
