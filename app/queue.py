@@ -1,12 +1,12 @@
-from pickle import dumps
+import pickle
 from uuid import uuid4
 
-from flask import current_app
+from app import app
 
-from redis import Redis
+import redis
 
 
-redis = Redis()
+redis = redis.from_url(app.config['REDIS_URI'])
 
 
 class DelayedResult(object):
@@ -19,16 +19,16 @@ class DelayedResult(object):
         if self._rv is None:
             rv = redis.get(self.key)
             if rv is not None:
-                self._rv = loads(rv)
+                self._rv = pickle.loads(rv)
         return self._rv
 
 
 def queuefunc(f):
     def delay(*args, **kwargs):
-        qkey = current_app.config['REDIS_QUEUE_KEY']
+        qkey = app.config['REDIS_QUEUE_KEY']
         key = '%s:result:%s' % (qkey, str(uuid4()))
-        s = dumps((f, key, args, kwargs))
-        redis.rpush(current_app.config['REDIS_QUEUE_KEY'], s)
+        s = pickle.dumps((f, key, args, kwargs))
+        redis.rpush(app.config['REDIS_QUEUE_KEY'], s)
         return DelayedResult(key)
     f.delay = delay
     return f

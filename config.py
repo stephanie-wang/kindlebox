@@ -15,7 +15,10 @@ if DEBUG:
 else:
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', '')
 
-
+if DEBUG:
+    REDIS_URI = 'redis://localhost:6379'
+else:
+    REDIS_URI = os.getenv('REDISTOGO_URL')
 REDIS_QUEUE_KEY = 'dropbox_delta_ids'
 
 DROPBOX_APP_KEY = ''
