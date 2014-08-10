@@ -26,6 +26,11 @@ def splash():
     return render_template('splash.html')
 
 
+@app.route('/about')
+def about():
+    return render_template('about.html')
+
+
 @app.route('/')
 def home():
     dropbox_id = session.get('dropbox_id')
