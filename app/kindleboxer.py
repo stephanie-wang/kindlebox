@@ -34,60 +34,51 @@ def kindlebox(dropbox_id):
     added_books = get_added_books(delta['entries'], client)
     removed_books = get_removed_books(delta['entries'])
 
+    # Download the books and get the hashes
+    hashes = []
+    for book_path in added_books:
+        if mimetypes.guess_type(book_path)[0] in BOOK_MIMETYPES:
+            hashes.append(
+                    (get_tmp_path(book_path), download_book(client, book_path))
+                    )
+
     # Download and get hashes for books added to the directory.
-    emailed_books = []
-    for book_path, book_hash in added_books:
-        duplicates = user.books.filter_by(book_hash=book_hash)
-        if duplicates.count() == 0:
-            emailed_books.append(get_tmp_path(book_path))
+    new_books = [book_path for book_path, book_hash in hashes if
+            user.books.filter_by(book_hash=book_hash) == 0]
 
     # Email ze books.
     email_from = user.emailer
     email_to = user.kindle_name + '@kindle.com'
-    for i in range(0, len(emailed_books), BOOK_CHUNK):
-        books = emailed_books[i : i + BOOK_CHUNK]
+    for i in range(0, len(new_books), BOOK_CHUNK):
+        books = new_books[i : i + BOOK_CHUNK]
         emailer.send_mail(email_from, email_to, 'convert', '', books)
 
     # Update the Dropbox delta cursor in database.
     user.cursor = delta['cursor']
     # Save all books to the database.
-    for book_path, book_hash in added_books:
+    for book_path, book_hash in hashes:
         book = Book(user.id, book_path, book_hash)
         db.session.add(book)
         try:
-            os.unlink(get_tmp_path(book_path))
+            os.unlink(book_path)
         except OSError:
             log.error("Womp womp. Couldn't delete book %s. Not a file?" %
                       book_path)
     for book_path in removed_books:
-        book = user.books.filter_by(pathname=book_path).first()
-        db.session.delete(book)
+        book = user.books.filter_by(pathname=get_tmp_path(book_path)).first()
+        if book is not None:
+            db.session.delete(book)
     db.session.commit()
 
 
 def get_added_books(delta_entries, client):
-    # Get all entries that were added and are not a directory.
-    added_books = []
-    for entry in delta_entries:
-        if entry[1] is None:
-            continue
-        if entry[1]['is_dir']:
-            continue
-        book_path = canonicalize(entry[0])
-        added_books.append(book_path)
-
-    # Download the books and get the hashes
-    hashes = []
-    for book_path in added_books:
-        if (mimetypes.guess_type(book_path)[0] not in BOOK_MIMETYPES):
-            continue
-        hashes.append((book_path, download_book(client, book_path)))
-
-    return hashes
+    return [canonicalize(entry[0]) for entry in delta_entries if entry[1] is
+            not None and not entry[1]['is_dir']]
 
 
 def get_removed_books(delta_entries):
-    return [entry[0] for entry in delta_entries if entry[1] is None]
+    return [canonicalize(entry[0]) for entry in delta_entries if entry[1] is
+            None]
 
 
 def download_book(client, book_path):
