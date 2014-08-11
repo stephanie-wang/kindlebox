@@ -5,6 +5,7 @@ from flask.ext.script import Manager
 from flask.ext.sqlalchemy import SQLAlchemy
 
 
+logging.basicConfig()
 log = logging.getLogger()
 
 app = Flask(__name__)

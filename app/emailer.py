@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import smtplib
+import os
 
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEBase import MIMEBase

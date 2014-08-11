@@ -1,5 +1,6 @@
 import hashlib
-import os.path
+import mimetypes
+import os
 
 from dropbox.client import DropboxClient
 
@@ -10,6 +11,7 @@ from app.models import User, Book
 from app.queue import queuefunc
 
 
+BASE_DIR = '/tmp/kindlebox'
 BOOK_MIMETYPES = {
     'application/pdf',
     'application/x-mobipocket-ebook',
@@ -17,6 +19,7 @@ BOOK_MIMETYPES = {
     'application/vnd.amazon.ebook',
     'text/plain',
     }
+BOOK_CHUNK = 5
 
 
 @queuefunc
@@ -34,17 +37,16 @@ def kindlebox(dropbox_id):
     # Download and get hashes for books added to the directory.
     emailed_books = []
     for book_path, book_hash in added_books:
-        duplicates = user.books.filter_by(hash=book_hash)
-        if duplicates.count() > 1:
-            continue
-        emailed_books.append(book_path)
+        duplicates = user.books.filter_by(book_hash=book_hash)
+        if duplicates.count() == 0:
+            emailed_books.append(get_tmp_path(book_path))
 
     # Email ze books.
     email_from = user.emailer
     email_to = user.kindle_name + '@kindle.com'
-    for i in range(len(emailed_books) / 25):
-        books = emailed_books[i * 25:(i+1) * 25]
-        emailer.send_email(email_from, email_to, 'convert', '', books)
+    for i in range(0, len(emailed_books), BOOK_CHUNK):
+        books = emailed_books[i : i + BOOK_CHUNK]
+        emailer.send_mail(email_from, email_to, 'convert', '', books)
 
     # Update the Dropbox delta cursor in database.
     user.cursor = delta['cursor']
@@ -53,7 +55,7 @@ def kindlebox(dropbox_id):
         book = Book(user.id, book_path, book_hash)
         db.session.add(book)
         try:
-            os.unlink(book_path)
+            os.unlink(get_tmp_path(book_path))
         except OSError:
             log.error("Womp womp. Couldn't delete book %s. Not a file?" %
                       book_path)
@@ -77,7 +79,7 @@ def get_added_books(delta_entries, client):
     # Download the books and get the hashes
     hashes = []
     for book_path in added_books:
-        if book_path not in BOOK_MIMETYPES:
+        if (mimetypes.guess_type(book_path)[0] not in BOOK_MIMETYPES):
             continue
         hashes.append((book_path, download_book(client, book_path)))
 
@@ -90,12 +92,13 @@ def get_removed_books(delta_entries):
 
 def download_book(client, book_path):
     try:
-        os.makedirs(book_path)
+        book_dir = os.path.dirname(book_path)
+        os.makedirs(book_dir)
     except OSError:
         pass
 
     md5 = hashlib.md5()
-    with open(book_path, 'w') as tmp_book:
+    with open(get_tmp_path(book_path), 'w') as tmp_book:
         with client.get_file(book_path) as book:
             data = book.read()
             tmp_book.write(data)
@@ -104,6 +107,10 @@ def download_book(client, book_path):
     book_hash = md5.digest().decode('iso-8859-1')
 
     return book_hash
+
+
+def get_tmp_path(book_path):
+    return os.path.join(BASE_DIR, book_path.strip('/'))
 
 
 def canonicalize(pathname):

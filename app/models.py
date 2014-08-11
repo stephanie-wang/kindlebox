@@ -29,7 +29,7 @@ class User(db.Model):
 class Book(db.Model):
     __tablename__ = 'book'
     id = db.Column(db.Integer, primary_key=True)
-    book_hash = db.Column(db.Integer)
+    book_hash = db.Column(db.Text)
     pathname = db.Column(db.Text)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
