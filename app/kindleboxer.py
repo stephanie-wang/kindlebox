@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import mimetypes
 import os
 
@@ -6,10 +7,12 @@ from dropbox.client import DropboxClient
 
 from app import db
 from app import emailer
-from app import log
 from app.models import User, Book
 from app.queue import queuefunc
 
+
+logging.basicConfig()
+log = logging.getLogger()
 
 BASE_DIR = '/tmp/kindlebox'
 BOOK_MIMETYPES = {

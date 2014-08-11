@@ -1,12 +1,8 @@
-import logging
 from flask import Flask
 from flask.ext.migrate import Migrate, MigrateCommand
 from flask.ext.script import Manager
 from flask.ext.sqlalchemy import SQLAlchemy
 
-
-logging.basicConfig()
-log = logging.getLogger()
 
 app = Flask(__name__)
 app.config.from_object('config')

@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 import pickle
+import logging
 
 from app import app
 
 import redis
 
+
+logging.basicConfig()
+log = logging.getLogger()
 
 redis = redis.from_url(app.config['REDIS_URI'])
 
