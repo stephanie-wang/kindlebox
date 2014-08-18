@@ -40,10 +40,31 @@
     font-size: 16px;
 }
 
+#emailer-wrapper {
+    float: left;
+    margin: 20px 0;
+    height: 40px;
+    width: 100%;
+}
+
 #emailer {
-    cursor: pointer;
-    margin: 15px 0;
     background: none;
+    width: 90%;
+    float: left;
+    height: 100%;
+    border-radius: 1px 0px 0px 1px;
+    border: solid #ccc 1px;
+    border-right: none;
+}
+
+#copy-emailer {
+    width: 10%;
+    float: left;
+    height: 100%;
+    border-radius: 0px 1px 1px 0px;
+    border: solid #ccc 1px;
+    padding: 5px;
+    font-size: 20px;
 }
 
 /* Success page */

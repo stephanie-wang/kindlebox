@@ -44,7 +44,12 @@ function showEmailer(emailer) {
         </div> \
         <div id="emailer-text" class="instruction"> \
           Kindlebox works by emailing the books in your Dropbox folder to your Kindle. Here\'s your Kindlebox emailer: \
-          <pre id="emailer" class="instruction-action">' + emailer + '</pre> \
+          <div id="emailer-wrapper"> \
+          <pre id="emailer">' + emailer + '</pre> \
+          <button id="copy-emailer" class="btn instruction-action" data-clipboard-target="emailer" data-toggle="tooltip" title="Copy" data-placement="right"> \
+            <i class="fa fa-clipboard"></i> \
+          </button> \
+          </div> \
           <p>To start receiving books through Kindlebox:</p> \
           <ul> \
             <li>Visit <a href="https://www.amazon.com/manageyourkindle" target="_blank">Manage Your Content and Devices</a> at amazon.com</li> \
@@ -114,7 +119,13 @@ $(function() {
     }
   });
 
-  $('#emailer').click(function() {
-      $(this).selectText();
+  ZeroClipboard.config({
+      swfPath: 'static/ZeroClipboard.swf'
+  });
+  var client = new ZeroClipboard($('#copy-emailer'));
+  $('#copy-emailer').tooltip({
+      delay: {
+          hide: 100,
+      }
   });
 });
