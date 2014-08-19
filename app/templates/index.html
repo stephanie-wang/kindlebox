@@ -59,15 +59,32 @@
 {% endblock %}
 
 {% block scripts %}
-    <script type="text/javascript" src="static/js/kindlebox.js"></script>
-    {% if active %}
-      <script>
-        showActivated();
-      </script>
-    {% elif kindle_name %}
-      <script>
-        showEmailer('{{ emailer }}');
-      </script>
-    {% endif %}
     <script type="text/javascript" src="static/js/lib/ZeroClipboard.js"></script>
+    <script type="text/jsx" src="static/js/kindlebox_react.js"></script>
+    <script type="text/jsx">
+    /** @jsx React.DOM */
+    var loggedIn = "{{ logged_in }}" === "True";
+    var active = "{{ active }}" === "True";
+    var kindleName = "";
+    var emailer = "";
+    {% if kindle_name %}
+        kindleName = "{{ kindle_name }}";
+    {% endif %}
+    {% if emailer %}
+        emailer = "{{ emailer }}";
+    {% endif %}
+    var loginUrl = "";
+    if (! loggedIn) {
+        var loginUrl = "{{ url_for('login') }}";
+    }
+    React.renderComponent(
+      <InstructionTable loggedIn={ loggedIn }
+                        active={ active }
+                        kindleName={ kindleName }
+                        loginUrl={ loginUrl }
+                        emailer={ emailer }
+                        />,
+      document.getElementById('content')
+    );
+    </script>
 {% endblock %}
