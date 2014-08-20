@@ -71,9 +71,6 @@ var InstructionTable = React.createClass({
     if (!(active === true || active == false)) {
       return;
     }
-    function setState() {
-      console.log(this);
-    }
     $.post('/activate', {
       'active': JSON.stringify(active),
     }, function(res) {
@@ -87,15 +84,24 @@ var InstructionTable = React.createClass({
 });
 
 var KindleNameInstruction = React.createClass({
+  // State:
+  //  - saved is whether the current form value is saved.
+  //  - focused is whether the form element is focused.
+  getInitialState: function() {
+    var saved = this.props.kindleName ? true : false;
+    return {
+      'saved': saved,
+      'focused': !saved,
+    }
+  },
   render: function() {
     var kindleNameClasses = React.addons.classSet({
-      'kindle-name-intruction': true,
       'instruction-row': true,
-      'intruction-completed': this.props.kindleName,
+      'instruction-completed': !this.state.focused && this.state.saved,
     });
     var defaultValue = this.props.kindleName ? this.props.kindleName : 'kindle username';
     return (
-        <div id="kindle-name-instruction" classSet={kindleNameClasses}>
+      <div id="kindle-name-instruction" className={kindleNameClasses}>
         <div className="instruction-num">
           2.
         </div>
@@ -103,7 +109,9 @@ var KindleNameInstruction = React.createClass({
           <form id="user-info-form" onSubmit={this.handleSubmit}>
               <input type="text" id="kindle-name" name="kindle_name"
                   className="form-control form-input instruction-action"
-                  defaultValue={defaultValue} ref="kindleName" />
+                  defaultValue={defaultValue} ref="kindleName"
+                  onBlur={this.handleBlur}
+                  onFocus={this.handleFocus} />
             <div id="kindle-com" className="pull-right">
               @kindle.com
             </div>
@@ -135,6 +143,19 @@ var KindleNameInstruction = React.createClass({
       }
     }.bind(this));
     return false;
+  },
+  handleFocus: function() {
+    this.setState({
+      'focused': true,
+    });
+  },
+  handleBlur: function() {
+    var inputNode = this.refs.kindleName.getDOMNode();
+    var kindleName = inputNode.value;
+    this.setState({
+      'saved': kindleName === this.props.kindleName,
+      'focused': false,
+    });
   },
 });
 
