@@ -127,18 +127,20 @@ var KindleNameInstruction = React.createClass({
     var formWidth = $container.find('#user-info-form').innerWidth();
     $container.find('#kindle-name').width(formWidth - kindleComWidth - 45);
   },
-  handleSubmit: function() {
+  getValue: function() {
     var inputNode = this.refs.kindleName.getDOMNode();
-    var kindleName = inputNode.value;
+    return inputNode.value;
+  },
+  handleSubmit: function() {
+    var kindleName = this.getValue();
     if (kindleName.length == 0) {
-      return;
+      return false;
     }
     $.post('/set-user-info', {
       'kindle_name': kindleName
     }, function(data) {
       if (data.success) {
         this.props.kindleNameHandler(kindleName, data.emailer);
-        $(inputNode).attr('saved_value', $('#kindle-name').val());
         $(':focus').blur();
       }
     }.bind(this));
@@ -150,8 +152,7 @@ var KindleNameInstruction = React.createClass({
     });
   },
   handleBlur: function() {
-    var inputNode = this.refs.kindleName.getDOMNode();
-    var kindleName = inputNode.value;
+    var kindleName = this.getValue();
     this.setState({
       'saved': kindleName === this.props.kindleName,
       'focused': false,
