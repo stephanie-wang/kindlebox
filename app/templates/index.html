@@ -73,6 +73,9 @@
         {% if emailer %}
             emailer = "{{ emailer }}";
         {% endif %}
+        {% if dropbox_id %}
+          var dropbox_id = "{{ dropbox_id }}";
+        {% endif %}
         var loginUrl = "";
         if (! loggedIn) {
             var loginUrl = "{{ url_for('login') }}";

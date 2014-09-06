@@ -11,6 +11,7 @@ from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from app import app
 from app import db
 from app.decorators import login_required_ajax
+from app.decorators import crossdomain
 from app.kindleboxer import kindlebox
 from app.models import User
 
@@ -53,6 +54,7 @@ def home():
         'kindle_name': kindle_name,
         'active': active,
         'emailer': emailer,
+        'dropbox_id': dropbox_id,
         }
     return render_template('index.html', **response)
 
@@ -96,14 +98,20 @@ def logout():
 
 
 @app.route('/activate', methods=['POST'])
-@login_required_ajax
-def activate_user(dropbox_id):
+@crossdomain(origin=['https://www.amazon.com', app.config['APP_URL']])
+def activate_user():
     response = {
         'success': False,
         }
     try:
-        active = json.loads(request.form.get('active'))
+        data = request.data
+        if data == '':
+            data = request.form.get('data')
+        data = json.loads(data)
+        active = data.get('active')
+        dropbox_id = data.get('dropbox_id')
         assert type(active) == bool
+        assert type(dropbox_id) in {str, unicode}
     except (json.JSONDecodeError, AssertionError):
         return jsonify(response)
 
@@ -118,7 +126,6 @@ def activate_user(dropbox_id):
         try:
             kindlebox.delay(dropbox_id)
         except:
-            # TODO: log
             return jsonify(response)
     return jsonify(response)
 

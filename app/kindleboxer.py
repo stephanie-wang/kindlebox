@@ -11,7 +11,6 @@ from app.models import User, Book
 from app.queue import queuefunc
 
 
-logging.basicConfig()
 log = logging.getLogger()
 
 BASE_DIR = '/tmp/kindlebox'

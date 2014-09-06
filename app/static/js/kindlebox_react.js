@@ -72,7 +72,10 @@ var InstructionTable = React.createClass({
       return;
     }
     $.post('/activate', {
-      'active': JSON.stringify(active),
+      'data': JSON.stringify({
+        'active': active,
+        'dropbox_id': dropbox_id,
+      })
     }, function(res) {
       if (res.success) {
         this.setState({
@@ -142,6 +145,7 @@ var KindleNameInstruction = React.createClass({
       if (data.success) {
         this.props.kindleNameHandler(kindleName, data.emailer);
         $(':focus').blur();
+        this.handleBlur();
       }
     }.bind(this));
     return false;
