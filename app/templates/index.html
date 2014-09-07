@@ -59,9 +59,11 @@
 {% endblock %}
 
 {% block scripts %}
+    <script type="text/javascript" src="static/js/kindlebox_setup.js"></script>
     <script type="text/jsx" src="static/js/kindlebox_react.js"></script>
     <script type="text/jsx">
         /** @jsx React.DOM */
+        var kindleboxCsrfToken = "{{ csrf_token() }}";
         var loggedIn = "{{ logged_in }}" === "True";
         var active = "{{ active }}" === "True";
         var kindleName = "";

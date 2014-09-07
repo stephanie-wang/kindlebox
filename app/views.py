@@ -9,6 +9,7 @@ from flask import request, session, redirect, url_for, abort, \
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from app import app
+from app import csrf
 from app import db
 from app.decorators import login_required_ajax
 from app.decorators import crossdomain
@@ -99,6 +100,7 @@ def logout():
 
 @app.route('/activate', methods=['POST'])
 @crossdomain(origin=['https://www.amazon.com', app.config['APP_URL']])
+@csrf.exempt
 def activate_user():
     response = {
         'success': False,
