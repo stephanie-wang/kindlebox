@@ -205,19 +205,6 @@ var EmailerInstructions = React.createClass({
       </div>
     );
   },
-  componentDidMount: function() {
-    // Click to copy emailer to clipboard.
-    var $copyEmailer = $(this.getDOMNode()).find('#copy-emailer');
-    ZeroClipboard.config({
-        swfPath: 'static/ZeroClipboard.swf'
-    });
-    var client = new ZeroClipboard($copyEmailer);
-    $copyEmailer.tooltip({
-        delay: {
-            hide: 100,
-        }
-    });
-  },
   activeHandler: function() {
     this.props.activeHandler(true);
   },
