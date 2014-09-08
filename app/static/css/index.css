@@ -39,6 +39,12 @@
     line-height: 40px;
 }
 
+#kindle-com-help {
+    float: left;
+    font-size: 16px;
+    margin-top: 10px;
+}
+
 /* 3. Emailer instructions */
 #bookmarklet-wrapper {
   width: 50%;

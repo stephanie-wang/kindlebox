@@ -110,6 +110,11 @@ var KindleNameInstruction = React.createClass({
             <div id="kindle-com" className="pull-right">
               @kindle.com
             </div>
+            <div id="kindle-com-help">
+            Don't know your Kindle email address? You can find it by going to <a href="https://www.amazon.com/manageyourkindle"
+            target="_blank">Manage Your Content and Devices</a> and finding
+            your device under <b>Your Devices</b>.
+            </div>
           </form>
         </div>
       </div>
@@ -205,7 +210,7 @@ var EmailerInstructions = React.createClass({
           </div>
           <div className="instruction instruction-text">
             Kindlebox needs permission from Amazon to email the books in your
-            Dropbox folder to your Kindle. To do that, first, drag this
+            Dropbox folder to your Kindle. To do that, first drag this
             bookmarklet to your bookmarks bar:
             <div id="bookmarklet-wrapper">
               <a id="bookmarklet" className="instruction-action" href="{bookmarklet}">Allow Kindlebox</a>
@@ -218,8 +223,10 @@ var EmailerInstructions = React.createClass({
           </div>
           <div className="instruction instruction-text">
             Next, visit <a href="https://www.amazon.com/manageyourkindle"
-            target="_blank">Manage Your Content and Devices</a>, and click the
-            bookmarklet from step 3. That's it!
+            target="_blank">Manage Your Content and Devices</a>. Make sure the
+            @kindle.com email address you entered in step 2 matches one of
+            your devices under <b>Your Devices</b>. Click the bookmarklet from
+            step 3, and you're good to go!
           </div>
         </div>
       </div>
