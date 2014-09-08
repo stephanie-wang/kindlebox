@@ -1,3 +1,7 @@
+.instruction-text {
+  margin-top: -15px;
+}
+
 .instruction-btn {
     line-height: 32px;
     margin: 0;
@@ -35,36 +39,16 @@
     line-height: 40px;
 }
 
-/* 3. Emailer address */
-#emailer-text {
-    font-size: 16px;
+/* 3. Emailer instructions */
+#bookmarklet-wrapper {
+  width: 50%;
+  margin: 30px auto;
+  text-align: center;
 }
 
-#emailer-wrapper {
-    float: left;
-    margin: 20px 0;
-    height: 40px;
-    width: 100%;
-}
-
-#emailer {
-    background: none;
-    width: 90%;
-    float: left;
-    height: 100%;
-    border-radius: 1px 0px 0px 1px;
-    border: solid #ccc 1px;
-    border-right: none;
-}
-
-#copy-emailer {
-    width: 10%;
-    float: left;
-    height: 100%;
-    border-radius: 0px 1px 1px 0px;
-    border: solid #ccc 1px;
-    padding: 5px;
-    font-size: 20px;
+#bookmarklet {
+  background: #ddd;
+  padding: 10px 20px;
 }
 
 /* Success page */

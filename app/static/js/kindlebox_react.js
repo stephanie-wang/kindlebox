@@ -9,7 +9,7 @@ var InstructionTable = React.createClass({
   },
   render: function() {
     if (this.state.active) {
-      return <ActiveMessage activeHandler={this.activeHandler} />;
+      return <ActiveMessage deactivateHandler={this.deactivateHandler} />;
     }
 
     var instructionClasses = React.addons.classSet({
@@ -50,7 +50,7 @@ var InstructionTable = React.createClass({
     if (this.props.loggedIn && this.state.kindleName) {
       emailerInstructions = <EmailerInstructions
           emailer={this.state.emailer}
-          activeHandler={this.activeHandler} />;
+          deactivateHandler={this.deactivateHandler} />;
     }
 
     return (
@@ -67,19 +67,11 @@ var InstructionTable = React.createClass({
       'emailer': emailer,
     });
   },
-  activeHandler: function(active) {
-    if (!(active === true || active == false)) {
-      return;
-    }
-    $.post('/activate', {
-      'data': JSON.stringify({
-        'active': active,
-        'dropbox_id': dropbox_id,
-      })
-    }, function(res) {
+  deactivateHandler: function() {
+    $.post('/deactivate', function(res) {
       if (res.success) {
         this.setState({
-          'active': active,
+          'active': false,
         });
       }
     }.bind(this));
@@ -166,47 +158,72 @@ var KindleNameInstruction = React.createClass({
 
 var EmailerInstructions = React.createClass({
   render: function() {
+
+    var bookmarklet = "javascript: (function() {" +
+        "var xhr = new XMLHttpRequest();" +
+        "xhr.open('POST', 'https://www.amazon.com/mn/dcw/myx/ajax-activity', true);" +
+        "xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');" +
+        "xhr.onload = function () {" +
+          "var res = JSON.parse(this.responseText);" +
+          "try {" +
+            "if (res.WhitelistEmail.success) {" +
+              "var form = document.createElement('form');" +
+              "form.setAttribute('method', 'post');" +
+              "form.setAttribute('action', '<appUrl>/activate');" +
+              "var csrfInput = document.createElement('input');" +
+              "csrfInput.setAttribute('type', 'hidden');" +
+              "csrfInput.setAttribute('name', 'csrf_token');" +
+              "csrfInput.setAttribute('value', '<kindleboxCsrfToken>');" +
+              "form.appendChild(csrfInput);" +
+              "form.submit()" +
+            "} else {" +
+              "throw res.WhitelistEmail.error;" +
+            "}" +
+          "} catch (err) {" +
+            "console.log(err);" +
+          "}" +
+        "};" +
+        "var data = '{\"param\":{\"WhitelistEmail\":{\"newEmail\":\"<emailer>\"}}}';" +
+        "var dataString = 'data=' + encodeURIComponent(data) + '&csrfToken=' + encodeURIComponent(csrfToken);" +
+        "xhr.send(dataString);" +
+      "}());";
+    var start = bookmarklet.search('<.*>');
+    var stop;
+    var key;
+    while (start > -1) {
+      stop = bookmarklet.substring(start).search('>');
+      key = bookmarklet.substring(start + 1, start + stop);
+      bookmarklet = bookmarklet.replace('<' + key + '>', window[key]);
+      start = bookmarklet.search('<.*>');
+    }
+
     return (
-      <div id="emailer-instructions">
-        <div id="emailer-instruction" className="instruction-row">
+      <div>
+        <div className="instruction-row">
           <div className="instruction-num">
             3.
           </div>
-          <div id="emailer-text" className="instruction">
-            Kindlebox works by emailing the books in your Dropbox folder to your Kindle. Here's your Kindlebox emailer:
-            <div id="emailer-wrapper">
-            <pre id="emailer">{this.props.emailer}</pre>
-            <button id="copy-emailer" className="btn instruction-action" data-clipboard-target="emailer" data-toggle="tooltip" title="Copy" data-placement="right">
-              <i className="fa fa-clipboard"></i>
-            </button>
+          <div className="instruction instruction-text">
+            Kindlebox needs permission from Amazon to email the books in your
+            Dropbox folder to your Kindle. To do that, first, drag this
+            bookmarklet to your bookmarks bar:
+            <div id="bookmarklet-wrapper">
+              <a id="bookmarklet" className="instruction-action" href="{bookmarklet}">Allow Kindlebox</a>
             </div>
-            <p>To start receiving books through Kindlebox:</p>
-            <ul>
-              <li>Visit <a href="https://www.amazon.com/manageyourkindle" target="_blank">Manage Your Content and Devices</a> at amazon.com</li>
-              <li>Go to the <b>Settings</b> tab</li>
-              <li>Scroll down to <b>Personal Document Settings</b></li>
-              <li>Add the above email address to your <b>Approved Personal Document E-mail List</b></li>
-            </ul>
-            <p>And finally...</p>
           </div>
         </div>
         <div className="instruction-row">
           <div className="instruction-num">
             4.
           </div>
-          <a onClick={this.activeHandler} className="instruction-btn">
-            <div className="instruction uncentered-action instruction-action">
-              <div className="instruction-action-content">
-                Activate Kindlebox!
-              </div>
-            </div>
-          </a>
+          <div className="instruction instruction-text">
+            Next, visit <a href="https://www.amazon.com/manageyourkindle"
+            target="_blank">Manage Your Content and Devices</a>, and click the
+            bookmarklet from step 3. That's it!
+          </div>
         </div>
       </div>
     );
-  },
-  activeHandler: function() {
-    this.props.activeHandler(true);
   },
 });
 
@@ -220,7 +237,7 @@ var ActiveMessage = React.createClass({
           <div>
             Any books you add to <code>Dropbox/kindlebox</code> will be sent to your Kindle.
           </div>
-          <a onClick={this.activeHandler} className="instruction-btn">
+          <a onClick={this.deactivateHandler} className="instruction-btn">
             <div className="instruction instruction-action start-stop">
               <div className="instruction-action-content">
                 Stop Kindlebox
@@ -230,7 +247,7 @@ var ActiveMessage = React.createClass({
         </div>
       );
   },
-  activeHandler: function() {
-    this.props.activeHandler(false);
+  deactivateHandler: function() {
+    this.props.deactivateHandler();
   },
 });

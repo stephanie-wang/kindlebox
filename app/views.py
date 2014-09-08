@@ -6,13 +6,10 @@ import hmac
 from dropbox.client import DropboxOAuth2Flow
 from flask import request, session, redirect, url_for, abort, \
     render_template, flash, jsonify
-from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from app import app
-from app import csrf
 from app import db
 from app.decorators import login_required_ajax
-from app.decorators import crossdomain
 from app.kindleboxer import kindlebox
 from app.models import User
 
@@ -55,7 +52,7 @@ def home():
         'kindle_name': kindle_name,
         'active': active,
         'emailer': emailer,
-        'dropbox_id': dropbox_id,
+        'app_url': app.config['APP_URL'],
         }
     return render_template('index.html', **response)
 
@@ -99,24 +96,22 @@ def logout():
 
 
 @app.route('/activate', methods=['POST'])
-@crossdomain(origin=['https://www.amazon.com', app.config['APP_URL']])
-@csrf.exempt
-def activate_user():
+@login_required_ajax
+def activate(dropbox_id):
+    set_active(True, dropbox_id)
+    return redirect(url_for('home'))
+
+
+@app.route('/deactivate', methods=['POST'])
+@login_required_ajax
+def deactivate(dropbox_id):
+    return set_active(False, dropbox_id)
+
+
+def set_active(active, dropbox_id):
     response = {
         'success': False,
         }
-    try:
-        data = request.data
-        if data == '':
-            data = request.form.get('data')
-        data = json.loads(data)
-        active = data.get('active')
-        dropbox_id = data.get('dropbox_id')
-        assert type(active) == bool
-        assert type(dropbox_id) in {str, unicode}
-    except (json.JSONDecodeError, AssertionError):
-        return jsonify(response)
-
     user = User.query.filter_by(dropbox_id=dropbox_id).first()
     if user is None:
         return jsonify(response)
