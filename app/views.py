@@ -3,6 +3,7 @@ import simplejson as json
 import hashlib
 import hmac
 
+from dropbox.client import DropboxClient
 from dropbox.client import DropboxOAuth2Flow
 from flask import request, session, redirect, url_for, abort, \
     render_template, flash, jsonify
@@ -36,6 +37,7 @@ def home():
     if dropbox_id is None and not request.args.get('redirect'):
         return redirect(url_for('splash'))
 
+    name = ''
     kindle_name = ''
     active = False
     emailer = ''
@@ -43,12 +45,14 @@ def home():
     user = User.query.filter_by(dropbox_id=dropbox_id).first()
     logged_in = dropbox_id is not None and user is not None
     if logged_in:
+        name = user.name
         kindle_name = user.kindle_name
         active = user.active
         emailer = user.emailer
 
     response = {
         'logged_in': logged_in,
+        'name': name,
         'kindle_name': kindle_name,
         'active': active,
         'emailer': emailer,
@@ -159,6 +163,7 @@ def dropbox_auth_finish():
         db.session.add(user)
 
     user.access_token = access_token
+    user.name = get_dropbox_name(access_token)
     db.session.commit()
 
     session['dropbox_id'] = user.dropbox_id
@@ -205,3 +210,9 @@ def get_auth_flow():
                                _scheme="https")
     return DropboxOAuth2Flow(DROPBOX_APP_KEY, DROPBOX_APP_SECRET, redirect_uri,
                              session, 'dropbox-auth-csrf-token')
+
+
+def get_dropbox_name(access_token):
+    client = DropboxClient(access_token)
+    meta = client.account_info()
+    return meta.get('display_name', '').split(' ')[0]

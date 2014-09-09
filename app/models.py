@@ -6,6 +6,7 @@ class User(db.Model):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     dropbox_id = db.Column(db.Integer)
+    name = db.Column(db.String(80))
     kindle_name = db.Column(db.String(80))
     # TODO: delete email.
     emailer = db.Column(db.String(120), unique=True)

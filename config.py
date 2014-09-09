@@ -16,7 +16,6 @@ CSRF_ENABLED = True
 
 SECRET_KEY = ''
 
-#SQLALCHEMY_DATABASE_URI = 'sqlite:////tmp/kindlebox.db'
 SQLALCHEMY_DATABASE_URI = 'postgres://sxwang@localhost/kindlebox'
 
 REDIS_URI = 'redis://localhost:6379'
