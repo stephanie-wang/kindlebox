@@ -213,7 +213,7 @@ var EmailerInstructions = React.createClass({
             Dropbox folder to your Kindle. To do that, first drag this
             bookmarklet to your bookmarks bar:
             <div id="bookmarklet-wrapper">
-              <a id="bookmarklet" className="instruction-action" href="{bookmarklet}">Allow Kindlebox</a>
+              <a id="bookmarklet" className="instruction-action" href={bookmarklet}>Allow Kindlebox</a>
             </div>
           </div>
         </div>

@@ -5,15 +5,23 @@ import os
 
 from dropbox.client import DropboxClient
 
+from app import celery
 from app import db
 from app import emailer
 from app.models import User, Book
-from app.queue import queuefunc
+#from app.queue import queuefunc
 
 
 log = logging.getLogger()
 
 BASE_DIR = '/tmp/kindlebox'
+try:
+    os.makedirs(BASE_DIR)
+except OSError:
+    pass
+
+mimetypes.add_type('application/x-mobipocket-ebook', '.mobi')
+mimetypes.add_type('application/epub+zip', '.epub')
 BOOK_MIMETYPES = {
     'application/pdf',
     'application/x-mobipocket-ebook',
@@ -24,11 +32,12 @@ BOOK_MIMETYPES = {
 BOOK_CHUNK = 5
 
 
-@queuefunc
+#@queuefunc
+@celery.task(ignore_result=True)
 def kindlebox(dropbox_id):
     user = User.query.filter_by(dropbox_id=dropbox_id, active=True).first()
     if user is None:
-        return
+        return False
 
     client = DropboxClient(user.access_token)
     delta = client.delta(user.cursor)
@@ -46,7 +55,7 @@ def kindlebox(dropbox_id):
 
     # Download and get hashes for books added to the directory.
     new_books = [book_path for book_path, book_hash in hashes if
-            user.books.filter_by(book_hash=book_hash) == 0]
+            user.books.filter_by(book_hash=book_hash).count() == 0]
 
     # Email ze books.
     email_from = user.emailer
@@ -71,6 +80,8 @@ def kindlebox(dropbox_id):
         if book is not None:
             db.session.delete(book)
     db.session.commit()
+
+    return True
 
 
 def get_added_books(delta_entries, client):

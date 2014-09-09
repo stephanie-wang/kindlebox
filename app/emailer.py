@@ -40,7 +40,7 @@ def send_mail(send_from, send_to, subject, text, files=[], server='smtp.gmail.co
         smtpserver = smtplib.SMTP(server,587)
         smtpserver.ehlo()
         smtpserver.starttls()
-        smtpserver.login(EMAILER_ADDRESS, EMAILER_PASSWORD)
+        smtpserver.login(send_from, EMAILER_PASSWORD)
     else:
         smtpserver = smtplib.SMTP(server)
 

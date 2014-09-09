@@ -22,6 +22,8 @@ SQLALCHEMY_DATABASE_URI = 'postgres://sxwang@localhost/kindlebox'
 REDIS_URI = 'redis://localhost:6379'
 REDIS_QUEUE_KEY = 'dropbox_delta_ids'
 
+CELERY_BROKER_URL = 'amqp://guest:guest@localhost//'
+
 DROPBOX_APP_KEY = ''
 DROPBOX_APP_SECRET = ''
 
@@ -29,6 +31,7 @@ EMAILER_ADDRESS = ''
 EMAILER_PASSWORD = ''
 
 
+### Environment settings overrides ###
 if DEV:
     try:
         from dev_config import *
