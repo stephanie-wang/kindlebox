@@ -25,6 +25,7 @@ class User(db.Model):
         random_base = get_random_string()
         emailer_address = 'kindleboxed+%s@gmail.com' % random_base
         self.emailer = emailer_address
+        return random_base
 
 
 class Book(db.Model):

@@ -1,7 +1,9 @@
 .PHONY: pull, heroku
 
 default:
-	./run.py runserver
+	DEBUG=1
+	-sudo rabbitmq-server --detached
+	foreman start
 
 pull:
 	git pull

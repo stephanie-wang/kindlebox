@@ -26,8 +26,11 @@ CELERY_BROKER_URL = 'amqp://guest:guest@localhost//'
 DROPBOX_APP_KEY = ''
 DROPBOX_APP_SECRET = ''
 
+# Kindlebox emailer settings. Emailer cookie is used to register each new
+# emailer with Gmail's "Send mail as" endpoint.
 EMAILER_ADDRESS = ''
 EMAILER_PASSWORD = ''
+EMAILER_COOKIE = ''
 
 
 ### Environment settings overrides ###

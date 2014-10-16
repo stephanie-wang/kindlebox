@@ -74,7 +74,8 @@ def set_user_info(dropbox_id):
 
     if kindle_name is not None:
         if user.kindle_name is None:
-            user.set_new_emailer()
+            # TODO: Log error
+            error = register_gmail_emailer(user.set_new_emailer())
         user.kindle_name = kindle_name
         db.session.commit()
         response['success'] = True
@@ -83,15 +84,15 @@ def set_user_info(dropbox_id):
     return jsonify(response)
 
 
+def _logout():
+    # TODO: clear any other session args
+    session.pop('dropbox_id', None)
+
+
 @app.route('/login')
 def login():
     # _logout()
     return redirect(get_auth_flow().start())
-
-
-def _logout():
-    # TODO: clear any other session args
-    session.pop('dropbox_id', None)
 
 
 @app.route('/logout')
@@ -218,3 +219,36 @@ def get_dropbox_name(access_token):
     client = DropboxClient(access_token)
     meta = client.account_info()
     return meta.get('display_name', '').split(' ')[0]
+
+def register_gmail_emailer(emailer_base):
+    import subprocess
+
+    cookie = app.config.get('EMAILER_COOKIE', None)
+    if cookie is None:
+        return False
+    emailer_arg = 'cfrp=1&cfss=&cfsp=587&cfsl=&cfsr=&cfn=Kindle+Box&cfa=kindleboxed%2B{emailer}%40gmail.com&cfia=on&cfrt='.format(emailer=emailer_base)
+
+    request_args = ['curl',
+         'https://mail.google.com/mail/?ui=2&ik=8ac11efc4f&view=cf&at=AF6bupOHMQUuohfutB0FBuEjaSTAw0TEzQ',
+         '-H',
+         'origin: https://mail.google.com',
+         '-H',
+         'accept-encoding: gzip,deflate',
+         '-H',
+         'accept-language: en-US,en;q=0.8',
+         '-H',
+         'user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.120 Safari/537.36',
+         '-H',
+         'content-type: application/x-www-form-urlencoded',
+         '-H',
+         'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+         '-H',
+         'cache-control: max-age=0',
+         '-H',
+         'cookie: ' + cookie,
+         '-H',
+         'referer: https://mail.google.com/mail/?ui=2&ik=8ac11efc4f&view=cf&at=AF6bupOHMQUuohfutB0FBuEjaSTAw0TEzQ',
+         '--data',
+         emailer_arg,
+         '--compressed']
+    return subprocess.check_call(request_args) == 0
