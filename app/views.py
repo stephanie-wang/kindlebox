@@ -187,6 +187,7 @@ def dropbox_unlink():
     return redirect(url_for('home'))
 
 
+@csrf.exempt
 @app.route('/dropbox-webhook', methods=['GET', 'POST'])
 def verify():
     if request.method != 'POST':
