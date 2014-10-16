@@ -190,7 +190,7 @@ def dropbox_unlink():
 @app.route('/dropbox-webhook', methods=['GET', 'POST'])
 def verify():
     if request.method != 'POST':
-        return request.args.get('challenge')
+        return request.args.get('challenge', '')
     signature = request.headers.get('X-Dropbox-Signature')
     if signature != hmac.new(DROPBOX_APP_SECRET, request.data,
                              hashlib.sha256).hexdigest():

