@@ -9,6 +9,7 @@ from flask import request, session, redirect, url_for, abort, \
     render_template, flash, jsonify
 
 from app import app
+from app import csrf
 from app import db
 from app.decorators import login_required_ajax
 from app.kindleboxer import kindlebox
