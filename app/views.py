@@ -200,7 +200,7 @@ def verify():
         abort(403)
 
     for dropbox_id in json.loads(request.data)['delta']['users']:
-        _process_user.delay(dropbox_id)
+        kindlebox.delay(dropbox_id)
 
     return ''
 
