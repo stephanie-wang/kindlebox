@@ -2,6 +2,8 @@
 var InstructionTable = React.createClass({
   getInitialState: function() {
     return {
+      'kindleboxCsrfToken': this.props.kindleboxCsrfToken,
+      'appUrl': this.props.appUrl,
       'active': this.props.active,
       'kindleName': this.props.kindleName,
       'emailer': this.props.emailer,
@@ -49,6 +51,8 @@ var InstructionTable = React.createClass({
     var emailerInstructions;
     if (this.props.loggedIn && this.state.kindleName) {
       emailerInstructions = <EmailerInstructions
+          kindleboxCsrfToken={this.state.kindleboxCsrfToken}
+          appUrl={this.state.appUrl}
           emailer={this.state.emailer}
           deactivateHandler={this.deactivateHandler} />;
     }
@@ -198,7 +202,7 @@ var EmailerInstructions = React.createClass({
     while (start > -1) {
       stop = bookmarklet.substring(start).search('>');
       key = bookmarklet.substring(start + 1, start + stop);
-      bookmarklet = bookmarklet.replace('<' + key + '>', window[key]);
+      bookmarklet = bookmarklet.replace('<' + key + '>', this.props[key]);
       start = bookmarklet.search('<.*>');
     }
 
