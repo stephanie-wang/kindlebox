@@ -8,7 +8,6 @@ class User(db.Model):
     dropbox_id = db.Column(db.Integer)
     name = db.Column(db.String(80))
     kindle_name = db.Column(db.String(80))
-    # TODO: delete email.
     emailer = db.Column(db.String(120), unique=True)
     active = db.Column(db.Boolean)
     access_token = db.Column(db.Text)
