@@ -48,10 +48,10 @@ def kindlebox(dropbox_id):
     # Download the books and get the hashes
     hashes = []
     for book_path in added_books:
-        if mimetypes.guess_type(book_path)[0] in BOOK_MIMETYPES:
-            hashes.append(
-                    (get_tmp_path(book_path), download_book(client, book_path))
-                    )
+        #if mimetypes.guess_type(book_path)[0] in BOOK_MIMETYPES:
+        hashes.append(
+                (get_tmp_path(book_path), download_book(client, book_path))
+                )
 
     # Download and get hashes for books added to the directory.
     new_books = [book_path for book_path, book_hash in hashes if
