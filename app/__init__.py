@@ -10,7 +10,7 @@ from celery import Celery
 def make_celery(app):
     celery = Celery(app.import_name, broker=app.config['CELERY_BROKER_URL'])
     celery.conf.update(app.config)
-    celery.conf.BROKER_POOL_LIMIT = 1
+    celery.conf.BROKER_POOL_LIMIT = 0
     TaskBase = celery.Task
     class ContextTask(TaskBase):
         abstract = True
