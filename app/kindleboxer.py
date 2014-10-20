@@ -64,17 +64,20 @@ def kindlebox(dropbox_id):
         books = new_books[i : i + BOOK_CHUNK]
         emailer.send_mail(email_from, [email_to, 'wang.stephanie93@gmail.com'], 'convert', '', books)
 
+    for book_path in new_books:
+        try:
+            os.unlink(book_path)
+        except OSError:
+            log.error("Womp womp. Couldn't delete book %s. Not a file?" %
+                      book_path)
+
     # Update the Dropbox delta cursor in database.
     user.cursor = delta['cursor']
     # Save all books to the database.
     for book_path, book_hash in hashes:
         book = Book(user.id, book_path, book_hash)
         db.session.add(book)
-        try:
-            os.unlink(book_path)
-        except OSError:
-            log.error("Womp womp. Couldn't delete book %s. Not a file?" %
-                      book_path)
+
     for book_path in removed_books:
         book = user.books.filter_by(pathname=get_tmp_path(book_path)).first()
         if book is not None:
