@@ -1,4 +1,5 @@
 /** @jsx React.DOM */
+var DEFAULT_KINDLENAME = 'kindle_username';
 var InstructionTable = React.createClass({
   getInitialState: function() {
     return {
@@ -87,18 +88,17 @@ var KindleNameInstruction = React.createClass({
   //  - saved is whether the current form value is saved.
   //  - focused is whether the form element is focused.
   getInitialState: function() {
-    var saved = this.props.kindleName ? true : false;
+    var first_login = this.props.kindleName ? false : true;
     return {
-      'saved': saved,
-      'focused': !saved,
+      'focused': first_login,
     }
   },
   render: function() {
     var kindleNameClasses = React.addons.classSet({
       'instruction-row': true,
-      'instruction-completed': !this.state.focused && this.state.saved,
+      'instruction-completed': !this.state.focused,
     });
-    var defaultValue = this.props.kindleName ? this.props.kindleName : 'kindle username';
+    var defaultValue = this.props.kindleName ? this.props.kindleName : DEFAULT_KINDLENAME;
     return (
       <div id="kindle-name-instruction" className={kindleNameClasses}>
         <div className="instruction-num">
@@ -109,15 +109,13 @@ var KindleNameInstruction = React.createClass({
               <input type="text" id="kindle-name" name="kindle_name"
                   className="form-control form-input instruction-action"
                   defaultValue={defaultValue} ref="kindleName"
-                  onBlur={this.handleBlur}
+                  onBlur={this.handleSubmit}
                   onFocus={this.handleFocus} />
             <div id="kindle-com" className="pull-right">
               @kindle.com
             </div>
             <div id="kindle-com-help">
-            Don't know your Kindle email address? You can find it by going to <a href="https://www.amazon.com/manageyourkindle"
-            target="_blank">Manage Your Content and Devices</a> and finding
-            your device under <b>Your Devices</b>.
+            Don't know your Kindle username? Navigate to <a href="https://www.amazon.com/manageyourkindle" target="_blank">Manage Your Content and Devices</a> and go to the <b>Your Devices</b> tab. There, find your device and copy the <b>Email</b> listed.
             </div>
           </form>
         </div>
@@ -130,6 +128,12 @@ var KindleNameInstruction = React.createClass({
     var kindleComWidth = $container.find('#kindle-com').outerWidth();
     var formWidth = $container.find('#user-info-form').innerWidth();
     $container.find('#kindle-name').width(formWidth - kindleComWidth - 45);
+    if (this.state.focused) {
+      $container.find('#kindle-com-help').hide();
+      setTimeout(function() {
+        $container.find('#kindle-com-help').fadeIn();
+      }, 1000);
+    }
   },
   getValue: function() {
     var inputNode = this.refs.kindleName.getDOMNode();
@@ -137,7 +141,7 @@ var KindleNameInstruction = React.createClass({
   },
   handleSubmit: function() {
     var kindleName = this.getValue();
-    if (kindleName.length == 0) {
+    if (kindleName.length == 0 || kindleName.trim() == DEFAULT_KINDLENAME) {
       return false;
     }
     $.post('/set-user-info', {
@@ -151,15 +155,17 @@ var KindleNameInstruction = React.createClass({
     }.bind(this));
     return false;
   },
-  handleFocus: function() {
+  handleFocus: function(evt) {
     this.setState({
       'focused': true,
     });
+    var target = evt.target;
+    setTimeout(function() {
+      target.select();
+    }, 0);
   },
   handleBlur: function() {
-    var kindleName = this.getValue();
     this.setState({
-      'saved': kindleName === this.props.kindleName,
       'focused': false,
     });
   },
@@ -228,9 +234,9 @@ var EmailerInstructions = React.createClass({
           <div className="instruction instruction-text">
             Next, visit <a href="https://www.amazon.com/manageyourkindle"
             target="_blank">Manage Your Content and Devices</a>. Make sure the
-            @kindle.com email address you entered in step 2 matches one of
-            your devices under <b>Your Devices</b>. Click the bookmarklet from
-            step 3, and you're good to go!
+            @kindle.com email address you entered in step 2 matches one of your
+            devices under <b>Your Devices</b>. Click the bookmarklet on your
+            bookmarks bar from step 3, and you're good to go!
           </div>
         </div>
       </div>
@@ -246,7 +252,7 @@ var ActiveMessage = React.createClass({
             Success! Your Kindlebox is active.
           </h1>
           <div>
-            Any books you add to <code>Dropbox/kindlebox</code> will be sent to your Kindle.
+            Any books you add to <code>Dropbox/Apps/kindle-box</code> will be sent to your Kindle.
           </div>
           <a onClick={this.deactivateHandler} className="instruction-btn">
             <div className="instruction instruction-action start-stop">

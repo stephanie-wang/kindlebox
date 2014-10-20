@@ -73,9 +73,6 @@ def set_user_info(dropbox_id):
     kindle_name = request.form.get('kindle_name')
 
     if kindle_name is not None:
-        if user.kindle_name is None:
-            # TODO: Log error
-            error = register_gmail_emailer(user.set_new_emailer())
         user.kindle_name = kindle_name
         db.session.commit()
         response['success'] = True
@@ -162,6 +159,8 @@ def dropbox_auth_finish():
     user = User.query.filter_by(dropbox_id=dropbox_id).first()
     if user is None:
         user = User(dropbox_id)
+        # TODO: Log error
+        error = register_gmail_emailer(user.set_new_emailer())
         db.session.add(user)
 
     user.access_token = access_token
