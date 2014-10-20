@@ -46,6 +46,16 @@ body {
 
 #logo {
     color: #eee;
+    font-size: 22px;
+}
+
+#navbar-logout {
+    font-size: 18px;
+}
+
+#navbar-welcome {
+    background: none;
+    font-size: 18px;
 }
 
 /* Base instruction styles */
