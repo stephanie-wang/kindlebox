@@ -3,7 +3,7 @@
 default:
 	DEBUG=1
 	-sudo rabbitmq-server --detached
-	foreman start
+	python run.py runserver
 
 pull:
 	git pull

@@ -181,7 +181,7 @@ var EmailerInstructions = React.createClass({
         "xhr.onload = function () {" +
           "var res = JSON.parse(this.responseText);" +
           "try {" +
-            "if (res.WhitelistEmail.success) {" +
+            "if (res.WhitelistEmail.success || res.WhitelistEmail.error == 'DUPLICATE_ITEM') {" +
               "var form = document.createElement('form');" +
               "form.setAttribute('method', 'post');" +
               "form.setAttribute('action', '<appUrl>/activate');" +
