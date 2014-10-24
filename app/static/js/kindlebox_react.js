@@ -259,19 +259,18 @@ var ActiveMessage = React.createClass({
   render: function() {
     return (
         <div>
-          <h1>
-            Success! Your Kindlebox is active.
-          </h1>
           <div>
-            Any books you add to <code>Dropbox/Apps/kindle-box</code> will be sent to your Kindle.
+            <h2>
+              Success! Any books you add to <code>Dropbox/Apps/kindle-box</code> will now be
+              sent to your Kindle.
+            </h2>
           </div>
-          <a onClick={this.deactivateHandler} className="instruction-btn">
-            <div className="instruction instruction-action start-stop">
-              <div className="instruction-action-content">
-                Stop Kindlebox
-              </div>
-            </div>
-          </a>
+          <div id="stop">
+            If you'd like to change your Kindle username, or
+            stop using Kindlebox completely, <a
+            onClick={this.deactivateHandler}
+            className="instruction-btn">click here</a>.
+          </div>
         </div>
       );
   },
