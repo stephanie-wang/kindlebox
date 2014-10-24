@@ -212,6 +212,10 @@ var EmailerInstructions = React.createClass({
       start = bookmarklet.search('<.*>');
     }
 
+    var lastInstructionDisplay = {
+      'display': 'none',
+    };
+
     return (
       <div>
         <div className="instruction-row">
@@ -219,28 +223,35 @@ var EmailerInstructions = React.createClass({
             3.
           </div>
           <div className="instruction instruction-text">
-            Kindlebox needs permission from Amazon to email the books in your
-            Dropbox folder to your Kindle. To do that, first drag this
-            bookmarklet to your bookmarks bar:
-            <div id="bookmarklet-wrapper">
+
+            Drag this bookmarklet to your bookmarks bar:
+            <div id="bookmarklet-wrapper" onDragEnd={this.showInstruction}>
               <a id="bookmarklet" className="instruction-action" href={bookmarklet}>Allow Kindlebox</a>
             </div>
+
           </div>
         </div>
-        <div className="instruction-row">
+        <div className="instruction-row" style={lastInstructionDisplay} ref="lastInstruction">
           <div className="instruction-num">
             4.
           </div>
           <div className="instruction instruction-text">
+
             Next, visit <a href="https://www.amazon.com/manageyourkindle"
-            target="_blank">Manage Your Content and Devices</a>. Make sure the
-            @kindle.com email address you entered in step 2 matches one of your
-            devices under <b>Your Devices</b>. Click the bookmarklet on your
-            bookmarks bar from step 3, and you're good to go!
+            target="_blank">Manage Your Content and Devices</a>. Click the
+            bookmarklet on your bookmarks bar from step 3, and you're good to
+            go!
+
           </div>
         </div>
       </div>
     );
+  },
+  showInstruction: function() {
+    var lastInstruction = this.refs.lastInstruction.getDOMNode();
+    setTimeout(function() {
+      $(lastInstruction).fadeIn();
+    }, 500);
   },
 });
 
