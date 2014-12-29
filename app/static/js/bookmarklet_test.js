@@ -15,7 +15,7 @@ function addCSS(source) {
 
 addScript("https://kindlebox.me/static/js/lib/jquery-1.11.1.min.js");
 addScript("https://kindlebox.me/static/js/lib/bootstrap.min.js");
-addScript("https://kindlebox.me/static/js/modal.js");
+addScript("https://kindlebox.me/static/js/bookmarklet.js");
 addCSS("https://kindlebox.me/static/css/lib/bootstrap.min.css");
 
 setDevice(1);
