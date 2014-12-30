@@ -101,6 +101,7 @@ def logout():
 @app.route('/activate', methods=['POST'])
 @login_required_ajax
 def activate(dropbox_id):
+    print request.data
     set_active(True, dropbox_id)
     return redirect(url_for('home'))
 

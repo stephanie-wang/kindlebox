@@ -33,7 +33,27 @@ function getDevices() {
   return devices;
 }
 
-function addModal() {
+function whitelistEmailer(emailer, $activateForm) {
+  $.post('https://www.amazon.com/mn/dcw/myx/ajax-activity', {
+    "data": '{"param":{"WhitelistEmail":{"newEmail":"' + emailer + '"}}}',
+    "csrfToken": csrfToken,
+  }, function(res) {
+    try {
+      if (res.WhitelistEmail.success || res.WhitelistEmail.error == 'DUPLICATE_ITEM') {
+        $activateForm.submit();
+      } else {
+        throw res.WhitelistEmail.error;
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  }, "json");
+}
+
+function addModal(kindleboxCsrfToken, appUrl, emailer) {
+  if ($('#' + MODAL_ID).length > 0) {
+    return;
+  }
   var $modalHtml = $('<div class="modal fade" id="' + MODAL_ID + '" tabindex="-1" role="dialog" aria-labelledby="' + MODAL_ID + '" aria-hidden="true">' +
       '  <div class="modal-dialog">' +
       '    <div class="modal-content">' +
@@ -43,62 +63,38 @@ function addModal() {
       '      </div>' +
       '      <div class="modal-body">' +
       '        Pick your Kindle(s)!' +
-      '        <form id="' + MODAL_FORM_ID + '">' +
+      '        <form id="' + MODAL_FORM_ID + '" action="' + appUrl + '/activate" method="POST">' +
+      '          <input type="hidden" name="csrf_token" value="' + kindleboxCsrfToken + '">' +
       '        </form>' +
       '      </div>' +
       '      <div class="modal-footer">' +
-      '        <button type="button" class="btn btn-primary">Activate Kindlebox</button>' +
+      '        <button id="activate-kindlebox-btn" type="button" class="btn btn-primary">Activate Kindlebox</button>' +
       '    </div>' +
       '  </div>' +
       '  </div>' +
       '</div>');
 
+  var $modalForm = $modalHtml.find('#' + MODAL_FORM_ID);
   var devices = getDevices();
   for (var i = 0; i < devices.length; i++) {
     var label = devices[i].tag;
     if (devices[i].type) {
       label += ' (' + devices[i].type + ')';
     }
-    $modalHtml.find('#' + MODAL_FORM_ID).append('<div class="checkbox">' +
+    $modalForm.append('<div class="checkbox">' +
       '  <label><input type="checkbox" value="">' +
         label +
       '</label>' +
       '</div>');
   }
+
+  $modalHtml.find("#activate-kindlebox-btn").click(function() {
+    whitelistEmailer(emailer, $modalForm);
+  });
+
   $('body').append($modalHtml);
 }
 
 function showModal() {
-  if ($('#' + MODAL_ID).length == 0) {
-    addModal();
-  }
   $('#' + MODAL_ID).modal();
-}
-
-function whitelistEmailer() {
-  var xhr = new XMLHttpRequest();
-  xhr.open('POST', 'https://www.amazon.com/mn/dcw/myx/ajax-activity', true);
-  xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-  xhr.onload = function () {
-    var res = JSON.parse(this.responseText);
-    try {
-      if (res.WhitelistEmail.success) {
-        var activate_xhr = new XMLHttpRequest();
-        activate_xhr.open('POST', "{{ url_for('activate_user') }}", true);
-        activate_xhr.onload = function() {
-          var res = JSON.parse(this.responseText);
-          console.log(res);
-        };
-        var data = JSON.stringify({'active': true});
-        activate_xhr.send(data);
-      } else {
-        throw res.WhitelistEmail.error;
-      }
-    } catch (err) {
-      console.log(err);
-    }
-  };
-  var data = '{"param":{"WhitelistEmail":{"newEmail":"{{ emailer }}"}}}';
-  var dataString = 'data=' + encodeURIComponent(data) + '&csrfToken=' + encodeURIComponent(csrfToken);
-  xhr.send(dataString);
 }

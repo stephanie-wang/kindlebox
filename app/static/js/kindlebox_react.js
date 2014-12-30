@@ -175,33 +175,31 @@ var EmailerInstructions = React.createClass({
   render: function() {
 
     var bookmarklet = "javascript: (function() {" +
-        "var xhr = new XMLHttpRequest();" +
-        "xhr.open('POST', 'https://www.amazon.com/mn/dcw/myx/ajax-activity', true);" +
-        "xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');" +
-        "xhr.onload = function () {" +
-          "var res = JSON.parse(this.responseText);" +
-          "try {" +
-            "if (res.WhitelistEmail.success || res.WhitelistEmail.error == 'DUPLICATE_ITEM') {" +
-              "var form = document.createElement('form');" +
-              "form.setAttribute('method', 'post');" +
-              "form.setAttribute('action', '<appUrl>/activate');" +
-              "var csrfInput = document.createElement('input');" +
-              "csrfInput.setAttribute('type', 'hidden');" +
-              "csrfInput.setAttribute('name', 'csrf_token');" +
-              "csrfInput.setAttribute('value', '<kindleboxCsrfToken>');" +
-              "form.appendChild(csrfInput);" +
-              "form.submit()" +
-            "} else {" +
-              "throw res.WhitelistEmail.error;" +
-            "}" +
-          "} catch (err) {" +
-            "console.log(err);" +
-          "}" +
-        "};" +
-        "var data = '{\"param\":{\"WhitelistEmail\":{\"newEmail\":\"<emailer>\"}}}';" +
-        "var dataString = 'data=' + encodeURIComponent(data) + '&csrfToken=' + encodeURIComponent(csrfToken);" +
-        "xhr.send(dataString);" +
-      "}());";
+        "function addScript(source) {" +
+        "  var script = document.createElement(\"script\");" +
+        "  script.type = \"text/javascript\";" +
+        "  script.src = source;" +
+        "  document.getElementsByTagName(\"head\")[0].appendChild(script);" +
+        "}" +
+        "function addCSS(source) {" +
+        "  var cssLink = document.createElement(\"link\");" +
+        "  cssLink.href = source;" +
+        "  cssLink.type = \"text/css\";" +
+        "  cssLink.rel = \"stylesheet\";" +
+        "  document.getElementsByTagName(\"head\")[0].appendChild(cssLink);" +
+        "}" +
+        "addScript(\"https://kindlebox.me/static/js/lib/jquery-1.11.1.min.js\");" +
+        "addScript(\"https://kindlebox.me/static/js/lib/bootstrap.min.js\");" +
+        "addCSS(\"https://kindlebox.me/static/css/lib/bootstrap.min.css\");" +
+        "setTimeout(function() {" +
+        "  setDevice(1);" +
+        "  setTimeout(function() {" +
+        "    addModal(\"<kindleboxCsrfToken>\", \"<appUrl>\", \"<emailer>\");" +
+        "    showModal();" +
+        "  }, 0);" +
+        "}, 0);" +
+        "}())";
+
     var start = bookmarklet.search('<.*>');
     var stop;
     var key;
