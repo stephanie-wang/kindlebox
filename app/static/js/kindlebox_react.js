@@ -175,11 +175,21 @@ var EmailerInstructions = React.createClass({
   render: function() {
 
     var bookmarklet = "javascript: (function() {" +
-        "function addScript(source) {" +
+        "function addScript(source, callback) {" +
         "  var script = document.createElement(\"script\");" +
         "  script.type = \"text/javascript\";" +
         "  script.src = source;" +
+        "  script.onload = callback;" +
         "  document.getElementsByTagName(\"head\")[0].appendChild(script);" +
+        "}" +
+        "function addScripts(scripts, callback) {" +
+        "  if (scripts.length == 1) {" +
+        "    addScript(scripts[0], callback);" +
+        "  } else {" +
+        "    addScript(scripts[0], function() {" +
+        "      addScripts(scripts.slice(1), callback);" +
+        "    });" +
+        "  }" +
         "}" +
         "function addCSS(source) {" +
         "  var cssLink = document.createElement(\"link\");" +
@@ -188,16 +198,18 @@ var EmailerInstructions = React.createClass({
         "  cssLink.rel = \"stylesheet\";" +
         "  document.getElementsByTagName(\"head\")[0].appendChild(cssLink);" +
         "}" +
-        "addScript(\"https://kindlebox.me/static/js/lib/jquery-1.11.1.min.js\");" +
-        "addScript(\"https://kindlebox.me/static/js/lib/bootstrap.min.js\");" +
         "addCSS(\"https://kindlebox.me/static/css/lib/bootstrap.min.css\");" +
-        "setTimeout(function() {" +
-        "  setDevice(1);" +
-        "  setTimeout(function() {" +
-        "    addModal(\"<kindleboxCsrfToken>\", \"<appUrl>\", \"<emailer>\");" +
-        "    showModal();" +
-        "  }, 0);" +
-        "}, 0);" +
+        "addScripts([" +
+        "  \"https://kindlebox.me/static/js/lib/jquery-1.11.1.min.js\"," +
+        "  \"https://kindlebox.me/static/js/lib/bootstrap.min.js\"," +
+        "  \"https://kindlebox.me/static/js/bookmarklet.js\"" +
+        "], function() {" +
+        "    setDevice(1);" +
+        "    setTimeout(function() {" +
+        "      addModal(\"<kindleboxCsrfToken>\", \"<appUrl>\", \"<emailer>\");" +
+        "      showModal();" +
+        "    }, 0);" +
+        "  });" +
         "}())";
 
     var start = bookmarklet.search('<.*>');
