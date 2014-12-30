@@ -98,3 +98,15 @@ function addModal(kindleboxCsrfToken, appUrl, emailer) {
 function showModal() {
   $('#' + MODAL_ID).modal();
 }
+
+function submitKindleName(kindleName) {
+  $.post('/set-user-info', {
+    'kindle_name': kindleName
+  }, function(data) {
+    if (data.success) {
+      this.props.kindleNameHandler(kindleName, data.emailer);
+      $(':focus').blur();
+      this.handleBlur();
+    }
+  }.bind(this));
+}

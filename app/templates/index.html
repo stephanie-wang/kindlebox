@@ -4,60 +4,6 @@
     <link href="static/css/index.css" rel="stylesheet">
 {% endblock %}
 
-{% block body %}
-
-{% if not active %}
-<div class="instruction-row 
-    {% if logged_in %}
-      instruction-completed
-    {% endif %}
-    ">
-  <div class="instruction-num">
-    1.
-  </div>
-  <a class="instruction-btn"
-      {% if not logged_in %}
-        href="{{ url_for('login') }}"
-      {% endif %}>
-    <div class="instruction dropbox-action instruction-action
-      {% if logged_in %}
-        instruction-action-inactive
-      {% endif %}">
-      <div class="instruction-action-content">
-        <img class="dropbox-logo" src="static/img/dropbox.png"/>
-          Login with Dropbox
-      </div>
-    </div>
-  </a>
-</div>
-
-{% if logged_in %}
-  <div id="kindle-name-instruction" class="instruction-row
-      {% if kindle_name %}
-          instruction-completed
-      {% endif %}">
-    <div class="instruction-num">
-      2.
-    </div>
-    <div class="instruction">
-      <form id="user-info-form">
-          <input type="text" id="kindle-name" name="kindle_name" class="form-control form-input instruction-action"
-        {% if kindle_name %}
-              value="{{ kindle_name }}">
-        {% else %}
-              placeholder="kindle username" autofocus>
-        {% endif %}
-        <div id="kindle-com" class="pull-right">
-          @kindle.com
-        </div>
-      </form>
-    </div>
-  </div>
-
-{% endif %}
-{% endif %}
-{% endblock %}
-
 {% block scripts %}
     <script type="text/javascript" src="static/js/kindlebox_setup.js"></script>
     <script type="text/jsx" src="static/js/kindlebox_react.js"></script>
@@ -66,11 +12,7 @@
         var kindleboxCsrfToken = "{{ csrf_token() }}";
         var loggedIn = "{{ logged_in }}" === "True";
         var active = "{{ active }}" === "True";
-        var kindleName = "";
         var emailer = "";
-        {% if kindle_name %}
-            kindleName = "{{ kindle_name }}";
-        {% endif %}
         {% if emailer %}
             emailer = "{{ emailer }}";
         {% endif %}
@@ -82,7 +24,6 @@
         React.renderComponent(
           <InstructionTable loggedIn={ loggedIn }
                             active={ active }
-                            kindleName={ kindleName }
                             loginUrl={ loginUrl }
                             emailer={ emailer }
                             appUrl={ appUrl }

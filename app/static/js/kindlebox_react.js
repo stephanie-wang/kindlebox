@@ -1,12 +1,10 @@
 /** @jsx React.DOM */
-var DEFAULT_KINDLENAME = 'kindle_username';
 var InstructionTable = React.createClass({
   getInitialState: function() {
     return {
       'kindleboxCsrfToken': this.props.kindleboxCsrfToken,
       'appUrl': this.props.appUrl,
       'active': this.props.active,
-      'kindleName': this.props.kindleName,
       'emailer': this.props.emailer,
     }
   },
@@ -42,15 +40,8 @@ var InstructionTable = React.createClass({
       </div>
       );
 
-    var kindleNameInstruction;
-    if (this.props.loggedIn) {
-      kindleNameInstruction = <KindleNameInstruction
-          kindleName={this.state.kindleName}
-          kindleNameHandler={this.kindleNameHandler} />;
-    }
-
     var emailerInstructions;
-    if (this.props.loggedIn && this.state.kindleName) {
+    if (this.props.loggedIn) {
       emailerInstructions = <EmailerInstructions
           kindleboxCsrfToken={this.state.kindleboxCsrfToken}
           appUrl={this.state.appUrl}
@@ -61,16 +52,9 @@ var InstructionTable = React.createClass({
     return (
       <div>
         {loginInstruction}
-        {kindleNameInstruction}
         {emailerInstructions}
       </div>
       );
-  },
-  kindleNameHandler: function(kindleName, emailer) {
-    this.setState({
-      'kindleName': kindleName,
-      'emailer': emailer,
-    });
   },
   deactivateHandler: function() {
     $.post('/deactivate', function(res) {
@@ -81,94 +65,6 @@ var InstructionTable = React.createClass({
       }
     }.bind(this));
   }
-});
-
-var KindleNameInstruction = React.createClass({
-  // State:
-  //  - saved is whether the current form value is saved.
-  //  - focused is whether the form element is focused.
-  getInitialState: function() {
-    var first_login = this.props.kindleName ? false : true;
-    return {
-      'focused': first_login,
-    }
-  },
-  render: function() {
-    var kindleNameClasses = React.addons.classSet({
-      'instruction-row': true,
-      'instruction-completed': !this.state.focused,
-    });
-    var defaultValue = this.props.kindleName ? this.props.kindleName : DEFAULT_KINDLENAME;
-    return (
-      <div id="kindle-name-instruction" className={kindleNameClasses}>
-        <div className="instruction-num">
-          2.
-        </div>
-        <div className="instruction">
-          <form id="user-info-form" onSubmit={this.handleSubmit}>
-              <input type="text" id="kindle-name" name="kindle_name"
-                  className="form-control form-input instruction-action"
-                  defaultValue={defaultValue} ref="kindleName"
-                  onBlur={this.handleSubmit}
-                  onFocus={this.handleFocus} />
-            <div id="kindle-com" className="pull-right">
-              @kindle.com
-            </div>
-            <div id="kindle-com-help">
-            Don't know your Kindle username? Navigate to <a href="https://www.amazon.com/manageyourkindle" target="_blank">Manage Your Content and Devices</a> and go to the <b>Your Devices</b> tab. There, find your device and copy the <b>Email</b> listed.
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  },
-  componentDidMount: function() {
-    // Set kindle form widths.
-    var $container = $(this.getDOMNode())
-    var kindleComWidth = $container.find('#kindle-com').outerWidth();
-    var formWidth = $container.find('#user-info-form').innerWidth();
-    $container.find('#kindle-name').width(formWidth - kindleComWidth - 45);
-    if (this.state.focused) {
-      $container.find('#kindle-com-help').hide();
-      setTimeout(function() {
-        $container.find('#kindle-com-help').fadeIn();
-      }, 1000);
-    }
-  },
-  getValue: function() {
-    var inputNode = this.refs.kindleName.getDOMNode();
-    return inputNode.value;
-  },
-  handleSubmit: function() {
-    var kindleName = this.getValue();
-    if (kindleName.length == 0 || kindleName.trim() == DEFAULT_KINDLENAME) {
-      return false;
-    }
-    $.post('/set-user-info', {
-      'kindle_name': kindleName
-    }, function(data) {
-      if (data.success) {
-        this.props.kindleNameHandler(kindleName, data.emailer);
-        $(':focus').blur();
-        this.handleBlur();
-      }
-    }.bind(this));
-    return false;
-  },
-  handleFocus: function(evt) {
-    this.setState({
-      'focused': true,
-    });
-    var target = evt.target;
-    setTimeout(function() {
-      target.select();
-    }, 0);
-  },
-  handleBlur: function() {
-    this.setState({
-      'focused': false,
-    });
-  },
 });
 
 var EmailerInstructions = React.createClass({
@@ -230,7 +126,7 @@ var EmailerInstructions = React.createClass({
       <div>
         <div className="instruction-row">
           <div className="instruction-num">
-            3.
+            2.
           </div>
           <div className="instruction instruction-text">
 
@@ -243,7 +139,7 @@ var EmailerInstructions = React.createClass({
         </div>
         <div className="instruction-row" style={lastInstructionDisplay} ref="lastInstruction">
           <div className="instruction-num">
-            4.
+            3.
           </div>
           <div className="instruction instruction-text">
 
