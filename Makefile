@@ -11,6 +11,7 @@ pull:
 	pip install -r requirements.txt
 	@echo "\nRunning any migrations..."
 	./run.py db upgrade
+	sudo service uwsgi restart
 
 heroku:
 	@echo "Starting push to Heroku..."
