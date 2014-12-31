@@ -48,6 +48,7 @@ def home():
     if logged_in:
         name = user.name
         kindle_name = user.kindle_name
+        added_bookmarklet = user.added_bookmarklet
         active = user.active
         emailer = user.emailer
 
@@ -55,11 +56,30 @@ def home():
         'logged_in': logged_in,
         'name': name,
         'kindle_name': kindle_name,
+        'added_bookmarklet': added_bookmarklet,
         'active': active,
         'emailer': emailer,
         'app_url': app.config['APP_URL'],
         }
     return render_template('index.html', **response)
+
+
+@app.route('/added-bookmarklet', methods=['POST'])
+@login_required_ajax
+def added_bookmarklet(dropbox_id):
+    response = {
+        'success': False,
+        }
+
+    user = User.query.filter_by(dropbox_id=dropbox_id).first()
+    if user is None:
+        return jsonify(response)
+
+    user.set_added_bookmarklet()
+    db.session.commit()
+    response['success'] = True
+
+    return jsonify(response)
 
 
 @app.route('/set-user-info', methods=['POST'])

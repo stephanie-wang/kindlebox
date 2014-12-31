@@ -9,6 +9,7 @@ class User(db.Model):
     name = db.Column(db.String(80))
     kindle_name = db.Column(db.String(80))
     emailer = db.Column(db.String(120), unique=True)
+    added_bookmarklet = db.Column(db.Boolean)
     active = db.Column(db.Boolean)
     access_token = db.Column(db.Text)
     cursor = db.Column(db.Text)
@@ -25,6 +26,9 @@ class User(db.Model):
         emailer_address = 'kindleboxed+%s@gmail.com' % random_base
         self.emailer = emailer_address
         return random_base
+
+    def set_added_bookmarklet(self):
+        self.added_bookmarklet = True
 
 
 class Book(db.Model):

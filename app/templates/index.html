@@ -9,9 +9,13 @@
     <script type="text/jsx" src="static/js/kindlebox_react.js"></script>
     <script type="text/jsx">
         /** @jsx React.DOM */
+        function toBool(variable) {
+            return variable === "True";
+        }
         var kindleboxCsrfToken = "{{ csrf_token() }}";
-        var loggedIn = "{{ logged_in }}" === "True";
-        var active = "{{ active }}" === "True";
+        var loggedIn = toBool("{{ logged_in }}");
+        var addedBookmarklet = toBool("{{ added_bookmarklet }}");
+        var active = toBool("{{ active }}");
         var emailer = "";
         {% if emailer %}
             emailer = "{{ emailer }}";
@@ -23,6 +27,7 @@
         }
         React.renderComponent(
           <InstructionTable loggedIn={ loggedIn }
+                            addedBookmarklet={ addedBookmarklet }
                             active={ active }
                             loginUrl={ loginUrl }
                             emailer={ emailer }

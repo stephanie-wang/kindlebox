@@ -2,10 +2,11 @@
 var InstructionTable = React.createClass({
   getInitialState: function() {
     return {
-      'kindleboxCsrfToken': this.props.kindleboxCsrfToken,
-      'appUrl': this.props.appUrl,
-      'active': this.props.active,
-      'emailer': this.props.emailer,
+      "kindleboxCsrfToken": this.props.kindleboxCsrfToken,
+      "appUrl": this.props.appUrl,
+      "addedBookmarklet": this.props.addedBookmarklet,
+      "active": this.props.active,
+      "emailer": this.props.emailer,
     }
   },
   render: function() {
@@ -45,6 +46,8 @@ var InstructionTable = React.createClass({
       emailerInstructions = <EmailerInstructions
           kindleboxCsrfToken={this.state.kindleboxCsrfToken}
           appUrl={this.state.appUrl}
+          addedBookmarklet={this.state.addedBookmarklet}
+          addedBookmarkletHandler={this.addedBookmarkletHandler}
           emailer={this.state.emailer}
           deactivateHandler={this.deactivateHandler} />;
     }
@@ -56,6 +59,11 @@ var InstructionTable = React.createClass({
       </div>
       );
   },
+  addedBookmarkletHandler: function() {
+    this.setState({
+      "addedBookmarklet": true,
+    });
+  },
   deactivateHandler: function() {
     $.post('/deactivate', function(res) {
       if (res.success) {
@@ -64,7 +72,7 @@ var InstructionTable = React.createClass({
         });
       }
     }.bind(this));
-  }
+  },
 });
 
 var EmailerInstructions = React.createClass({
@@ -118,9 +126,10 @@ var EmailerInstructions = React.createClass({
       start = bookmarklet.search('<.*>');
     }
 
-    var lastInstructionDisplay = {
-      'display': 'none',
-    };
+    var lastInstructionDisplay = {};
+    if (!this.props.addedBookmarklet) {
+      lastInstructionDisplay["display"] = "none";
+    }
 
     return (
       <div>
@@ -158,6 +167,12 @@ var EmailerInstructions = React.createClass({
     setTimeout(function() {
       $(lastInstruction).fadeIn();
     }, 500);
+
+    $.post("/added-bookmarklet", function(res) {
+      if (res.success) {
+        this.props.addedBookmarkletHandler();
+      }
+    }.bind(this));
   },
 });
 
