@@ -1,0 +1,34 @@
+#kindlebox-device-picker, #kindlebox-device-picker h2, #kindlebox-device-picker h3 {
+  font-family: 'Arvo', 'Droid Serif', serif;
+}
+
+#kindlebox-device-picker {
+  font-size: 16px;
+}
+
+.kindlebox-device-checkbox {
+  visibility: hidden;
+}
+
+.kindlebox-device-label {
+  border: solid 1px white;
+  padding-left: 10px !important;
+  height: 40px;
+  line-height: 40px;
+
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -o-user-select: none;
+  user-select: none;
+}
+
+.kindlebox-device-label:hover {
+  background-color: #ebebeb;
+  border: solid 1px #ebebeb;
+}
+
+.kindlebox-device-checkbox:checked + .kindlebox-device-label {
+  background-color: #D0E2F2;
+  border: solid 1px #428bca;
+}
