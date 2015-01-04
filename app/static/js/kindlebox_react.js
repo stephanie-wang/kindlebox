@@ -77,44 +77,72 @@ var InstructionTable = React.createClass({
 
 var EmailerInstructions = React.createClass({
   render: function() {
-
+    // TODO: Also wait for all the devices on site to load before adding modal.
     var bookmarklet = "javascript: (function() {" +
         "function addScript(source, callback) {" +
-        "  var script = document.createElement(\"script\");" +
-        "  script.type = \"text/javascript\";" +
-        "  script.src = source;" +
-        "  script.onload = callback;" +
-        "  document.getElementsByTagName(\"head\")[0].appendChild(script);" +
+          "var script = document.createElement(\"script\");" +
+          "script.className = \"kindlebox-source\";" +
+          "script.type = \"text/javascript\";" +
+          "script.src = source;" +
+          "script.onload = callback;" +
+          "document.getElementsByTagName(\"head\")[0].appendChild(script);" +
         "}" +
-        "function addScripts(scripts, callback) {" +
-        "  if (scripts.length == 1) {" +
-        "    addScript(scripts[0], callback);" +
-        "  } else {" +
-        "    addScript(scripts[0], function() {" +
-        "      addScripts(scripts.slice(1), callback);" +
-        "    });" +
-        "  }" +
+        "function addCSS(source, callback) {" +
+          "var style = document.createElement('style');" +
+          "style.className = \"kindlebox-source\";" +
+          "style.textContent = '@import url(\"' + source + '\")';" +
+          "var waitLoad = setInterval(function() {" +
+            "try {" +
+              "style.sheet.cssRules;" +
+              "callback();" +
+              "clearInterval(waitLoad);" +
+            "} catch (e){}" +
+          "}, 10);" +
+          "document.getElementsByTagName(\"head\")[0].appendChild(style);" +
         "}" +
-        "function addCSS(source) {" +
-        "  var cssLink = document.createElement(\"link\");" +
-        "  cssLink.href = source;" +
-        "  cssLink.type = \"text/css\";" +
-        "  cssLink.rel = \"stylesheet\";" +
-        "  document.getElementsByTagName(\"head\")[0].appendChild(cssLink);" +
+        "function addExternalSources(sources, callback) {" +
+          "if (sources.length == 0) {" +
+            "callback();" +
+            "return;" +
+          "}" +
+          "var source = sources.shift();" +
+          "var loadSource;" +
+          "var suffix = \".js\";" +
+          "if (source.indexOf(suffix, source.length - suffix.length) !== -1) {" +
+            "loadSource = addScript;" +
+          "} else {" +
+            "loadSource = addCSS;" +
+          "}" +
+          "loadSource(source, function() {" +
+            "addExternalSources(sources, callback);" +
+          "});" +
         "}" +
-        "addCSS(\"https://kindlebox.me/static/css/lib/bootstrap.min.css\");" +
-        "addScripts([" +
-        "  \"https://kindlebox.me/static/js/lib/jquery-1.11.1.min.js\"," +
-        "  \"https://kindlebox.me/static/js/lib/bootstrap.min.js\"," +
-        "  \"https://kindlebox.me/static/js/bookmarklet.js\"" +
-        "], function() {" +
-        "    setDevice(1);" +
-        "    setTimeout(function() {" +
-        "      addModal(\"<kindleboxCsrfToken>\", \"<appUrl>\", \"<emailer>\");" +
-        "      showModal();" +
-        "    }, 0);" +
-        "  });" +
-        "}())";
+        "var sources = [" +
+          "\"https://fonts.googleapis.com/css?family=Arvo\"," +
+          "\"https://kindlebox.me/static/css/lib/bootstrap.min.css\"," +
+          "\"https://kindlebox.me/static/css/lib/font-awesome.min.css\"," +
+          "\"https://kindlebox.me/static/css/bookmarklet.css\"," +
+          "\"https://kindlebox.me/static/js/lib/jquery-1.11.1.min.js\"," +
+          "\"https://kindlebox.me/static/js/lib/bootstrap.min.js\"," +
+          "\"https://kindlebox.me/static/js/bookmarklet.js\"" +
+        "];" +
+        "if (document.getElementsByClassName(\"kindlebox-source\").length == sources.length) {" +
+          "sources = [];" +
+        "}" +
+        "addExternalSources(sources, function() {" +
+          "setDevice(1);" +
+          "var waitDevices = setInterval(function() {" +
+            "try {" +
+              "document.getElementsByClassName('noDevicesFound_myx')[0].style.display;" +
+              "addModal(\"<kindleboxCsrfToken>\", \"<appUrl>\", \"<emailer>\");" +
+              "showModal();" +
+              "clearInterval(waitDevices);" +
+            "} catch(e) { " +
+            "} " +
+          "}, 10);" +
+        "});" +
+      "}())";
+
 
     var start = bookmarklet.search('<.*>');
     var stop;

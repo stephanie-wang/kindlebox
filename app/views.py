@@ -83,25 +83,6 @@ def added_bookmarklet(dropbox_id):
     return jsonify(response)
 
 
-@app.route('/set-user-info', methods=['POST'])
-@login_required_ajax
-def set_user_info(dropbox_id):
-    response = {
-        'success': False,
-        }
-
-    user = User.query.filter_by(dropbox_id=dropbox_id).first()
-    kindle_name = request.form.get('kindle_name')
-
-    if kindle_name is not None:
-        user.kindle_name = kindle_name
-        db.session.commit()
-        response['success'] = True
-        response['emailer'] = user.emailer
-
-    return jsonify(response)
-
-
 def _logout():
     # TODO: clear any other session args
     session.pop('dropbox_id', None)
@@ -119,11 +100,60 @@ def logout():
     return redirect(url_for('home', redirect=True))
 
 
+def validate_kindle_name(kindle_name):
+    # Check for duplicates? Might end up blocking real users...
+    kindle_name = kindle_name.lower()
+    if (kindle_name.endswith('@kindle.com') or
+            kindle_name.endswith('@free.kindle.com')):
+        return kindle_name
+
+    return None
+
+
+@app.route('/active')
+@login_required_ajax
+def active(dropbox_id):
+    user = User.query.filter_by(dropbox_id=dropbox_id).first()
+    return jsonify({
+            'active': user.active,
+            })
+
+
 @app.route('/activate', methods=['POST'])
 @login_required_ajax
 def activate(dropbox_id):
-    print request.data
-    set_active(True, dropbox_id)
+    user = User.query.filter_by(dropbox_id=dropbox_id).first()
+    if not user.active:
+        if 'kindle_names' not in request.form:
+            return redirect(url_for('home'))
+
+        # Add all the Kindle usernames.
+        form_kindle_names = request.form.get('kindle_names')
+        try:
+            kindle_names = json.loads(form_kindle_names)
+        except json.JSONDecodeError:
+            return redirect(url_for('home'))
+
+        if type(kindle_names) != list:
+            return redirect(url_for('home'))
+
+        for kindle_name in kindle_names:
+            kindle_name = validate_kindle_name(kindle_name)
+            if not kindle_name:
+                continue
+            #kindle_name_row = KindleName(user.id, kindle_name)
+            #db.session.add(kindle_name_row)
+            # TODO: Allow a list of usernames
+            user.kindle_name = kindle_name
+            break
+
+        # TODO: Return an error to the client
+        if not user.kindle_name:
+            return redirect(url_for('home'))
+
+        set_active(True, dropbox_id)
+        db.session.commit()
+
     return redirect(url_for('home'))
 
 
