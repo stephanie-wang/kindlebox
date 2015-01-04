@@ -40,6 +40,7 @@ def home():
 
     name = ''
     kindle_name = ''
+    added_bookmarklet = False
     active = False
     emailer = ''
 
