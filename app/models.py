@@ -7,13 +7,18 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     dropbox_id = db.Column(db.Integer)
     name = db.Column(db.String(80))
-    kindle_name = db.Column(db.String(80))
     emailer = db.Column(db.String(120), unique=True)
     added_bookmarklet = db.Column(db.Boolean)
     active = db.Column(db.Boolean)
     access_token = db.Column(db.Text)
     cursor = db.Column(db.Text)
-    books = db.relationship('Book', backref='user', lazy='dynamic')
+
+    # @kindle.com email addresses.
+    kindle_names = db.relationship('KindleName', backref='user', lazy='dynamic',
+                                   cascade='delete')
+    # Hashes of the user's current books.
+    books = db.relationship('Book', backref='user', lazy='dynamic',
+                            cascade='delete')
 
     def __init__(self, dropbox_id):
         self.dropbox_id = dropbox_id

@@ -14,6 +14,7 @@ from app import db
 from app.decorators import login_required_ajax
 from app.kindleboxer import kindlebox
 from app.models import User
+from app.models import KindleName
 
 
 DEBUG = app.config.get('DEBUG', False)
@@ -38,28 +39,18 @@ def home():
     if dropbox_id is None and not request.args.get('redirect'):
         return redirect(url_for('splash'))
 
-    name = ''
-    kindle_name = ''
-    added_bookmarklet = False
-    active = False
-    emailer = ''
-
+    # Use a blank user if no one's logged in.
     user = User.query.filter_by(dropbox_id=dropbox_id).first()
     logged_in = dropbox_id is not None and user is not None
-    if logged_in:
-        name = user.name
-        kindle_name = user.kindle_name
-        added_bookmarklet = user.added_bookmarklet
-        active = user.active
-        emailer = user.emailer
+    if not logged_in:
+        user = User(dropbox_id)
 
     response = {
         'logged_in': logged_in,
-        'name': name,
-        'kindle_name': kindle_name,
-        'added_bookmarklet': added_bookmarklet,
-        'active': active,
-        'emailer': emailer,
+        'name': user.name,
+        'added_bookmarklet': user.added_bookmarklet,
+        'active': user.active,
+        'emailer': user.emailer,
         'app_url': app.config['APP_URL'],
         }
     return render_template('index.html', **response)
@@ -101,10 +92,14 @@ def logout():
 
 
 def validate_kindle_name(kindle_name):
+    # TODO: Use validate_email library
     # Check for duplicates? Might end up blocking real users...
     kindle_name = kindle_name.lower()
-    if (kindle_name.endswith('@kindle.com') or
-            kindle_name.endswith('@free.kindle.com')):
+
+    if kindle_name.endswith('@free.kindle.com'):
+        kindle_name = kindle_name[:-len('@free.kindle.com')] + '@kindle.com'
+
+    if kindle_name.endswith('@kindle.com'):
         return kindle_name
 
     return None
@@ -139,16 +134,14 @@ def activate(dropbox_id):
 
         for kindle_name in kindle_names:
             kindle_name = validate_kindle_name(kindle_name)
-            if not kindle_name:
+            if kindle_name is None:
                 continue
-            #kindle_name_row = KindleName(user.id, kindle_name)
-            #db.session.add(kindle_name_row)
-            # TODO: Allow a list of usernames
-            user.kindle_name = kindle_name
-            break
+            kindle_name_row = KindleName(user.id, kindle_name)
+            db.session.add(kindle_name_row)
 
+        db.session.flush()
         # TODO: Return an error to the client
-        if not user.kindle_name:
+        if user.kindle_names.first() is None:
             return redirect(url_for('home'))
 
         set_active(True, dropbox_id)
@@ -160,6 +153,10 @@ def activate(dropbox_id):
 @app.route('/deactivate', methods=['POST'])
 @login_required_ajax
 def deactivate(dropbox_id):
+    user = User.query.filter_by(dropbox_id=dropbox_id).first()
+    if user is not None and user.active:
+        user.kindle_names.delete()
+        db.session.commit()
     return set_active(False, dropbox_id)
 
 
