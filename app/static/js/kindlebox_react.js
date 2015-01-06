@@ -214,7 +214,7 @@ var ActiveMessage = React.createClass({
               sent to your Kindle.
             </h2>
           </div>
-          <div id="stop">
+          <div>
             If you'd like to change your Kindle username, or
             stop using Kindlebox completely, <a
             onClick={this.deactivateHandler}
