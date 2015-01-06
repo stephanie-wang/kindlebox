@@ -23,6 +23,16 @@ DROPBOX_APP_KEY = app.config.get('DROPBOX_APP_KEY', '')
 DROPBOX_APP_SECRET = app.config.get('DROPBOX_APP_SECRET', '')
 
 
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('error.html'), 404
+
+
+@app.errorhandler(400)
+def error(e):
+    return render_template('error.html'), 400
+
+
 @app.route('/start')
 def splash():
     return render_template('splash.html')
@@ -120,17 +130,17 @@ def activate(dropbox_id):
     user = User.query.filter_by(dropbox_id=dropbox_id).first()
     if not user.active:
         if 'kindle_names' not in request.form:
-            return redirect(url_for('home'))
+            abort(400)
 
         # Add all the Kindle usernames.
         form_kindle_names = request.form.get('kindle_names')
         try:
             kindle_names = json.loads(form_kindle_names)
         except json.JSONDecodeError:
-            return redirect(url_for('home'))
+            abort(400)
 
         if type(kindle_names) != list:
-            return redirect(url_for('home'))
+            abort(400)
 
         for kindle_name in kindle_names:
             kindle_name = validate_kindle_name(kindle_name)
@@ -142,7 +152,7 @@ def activate(dropbox_id):
         db.session.flush()
         # TODO: Return an error to the client
         if user.kindle_names.first() is None:
-            return redirect(url_for('home'))
+            abort(400)
 
         set_active(True, dropbox_id)
         db.session.commit()

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block css %}
+    <!--link href="static/css/index.css" rel="stylesheet"-->
+{% endblock %}
+
+{% block body %}
+<div>
+  <h2>
+    Uh-oh! Something wonky happened. Go back to the <a href="{{
+    url_for('home') }}">homepage</a> and try again?
+  </h2>
+</div>
+<div>
+  If you think this is an issue with Kindlebox, let us know at
+  <a href="mailto:blah@kindlebox.me">blah@kindlebox.me</a>!
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}
