@@ -42,3 +42,14 @@ class Book(db.Model):
         self.user_id = user_id
         self.pathname = pathname
         self.book_hash = book_hash
+
+
+class KindleName(db.Model):
+    __tablename__ = 'kindle_name'
+    id = db.Column(db.Integer, primary_key=True)
+    kindle_name = db.Column(db.String(120))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+    def __init__(self, user_id, kindle_name):
+      self.user_id = user_id
+      self.kindle_name = kindle_name

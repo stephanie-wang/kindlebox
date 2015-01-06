@@ -181,9 +181,9 @@ var EmailerInstructions = React.createClass({
           <div className="instruction instruction-text">
 
             Next, visit <a href="https://www.amazon.com/manageyourkindle"
-            target="_blank">Manage Your Content and Devices</a>. Click the
-            bookmarklet on your bookmarks bar from step 3, and you're good to
-            go!
+            target="_blank">Manage Your Content and Devices</a> on Amazon.
+            Click the bookmarklet on your bookmarks bar from step 3, pick your
+            Kindle devices, and you're good to go!
 
           </div>
         </div>
