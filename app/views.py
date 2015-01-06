@@ -100,7 +100,7 @@ def validate_kindle_name(kindle_name):
         kindle_name = kindle_name[:-len('@free.kindle.com')] + '@kindle.com'
 
     if kindle_name.endswith('@kindle.com'):
-        return kindle_name
+        return kindle_name[:-len('@kindle.com')]
 
     return None
 
