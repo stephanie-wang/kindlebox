@@ -6,6 +6,10 @@
   font-size: 16px;
 }
 
+#kindlebox-error {
+  color: #F28C00;
+}
+
 .kindlebox-device-checkbox {
   visibility: hidden;
 }

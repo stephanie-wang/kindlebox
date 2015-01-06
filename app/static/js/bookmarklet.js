@@ -2,7 +2,8 @@ var KINDLEBOX_MODAL_ID = 'kindlebox-device-picker';
 var KINDLEBOX_FORM_ID = 'kindlebox-devices-form';
 var KINDLEBOX_DEVICES_ID = 'kindlebox-devices-container';
 
-var numKindleboxDevices = -1;
+var kindleboxDevices = [];
+var whitelistedEmailer = false;
 
 
 function setDevice(deviceNum) {
@@ -19,13 +20,14 @@ function htmlToString($html) {
 }
 
 function getNumDevices() {
-  if (numKindleboxDevices < 0) {
-    numKindleboxDevices = $('.deviceName_myx.a-size-base').length;
-  }
-  return numKindleboxDevices;
+  return $('.deviceName_myx.a-size-base').length;
 }
 
 function getDevices() {
+  if (kindleboxDevices.length > 0) {
+    return kindleboxDevices;
+  }
+
   var numDevices = getNumDevices();
   var devices = [];
   for (var i = 1; i <= numDevices; i++) {
@@ -40,16 +42,25 @@ function getDevices() {
       devices.push(device);
     }
   }
+  kindleboxDevices = devices;
   return devices;
 }
 
 function whitelistEmailer(emailer, successCallback) {
+  // If we've already succesfully whitelisted the emailer in this load of the
+  // bookmarklet, go straight to the callback.
+  if (whitelistedEmailer) {
+    successCallback();
+    return;
+  }
+
   $.post('https://www.amazon.com/mn/dcw/myx/ajax-activity', {
     "data": '{"param":{"WhitelistEmail":{"newEmail":"' + emailer + '"}}}',
     "csrfToken": csrfToken,
   }, function(res) {
     try {
       if (res.WhitelistEmail.success || res.WhitelistEmail.error == 'DUPLICATE_ITEM') {
+          whitelistedEmailer = true;
           successCallback();
       } else {
         throw res.WhitelistEmail.error;
@@ -63,61 +74,71 @@ function whitelistEmailer(emailer, successCallback) {
 function addModal(kindleboxCsrfToken, appUrl, emailer) {
   // If the modal has already been added and it has the right number of
   // devices, don't do anything.
-  if ($("#" + KINDLEBOX_MODAL_ID).length == 0) {
-    var $modalHtml = $('<div class="modal fade" id="' + KINDLEBOX_MODAL_ID + '" tabindex="-1" role="dialog" aria-labelledby="' + KINDLEBOX_MODAL_ID + '" aria-hidden="true">' +
-        '  <div class="modal-dialog">' +
-        '    <div class="modal-content">' +
-        '      <div class="modal-header">' +
-        '      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>' +
-        '      <h2>Kindlebox</h2>' +
-        '      </div>' +
-        '      <div class="modal-body">' +
-        '        <b>Select your Kindle device(s)!</b>' +
-        '        <form id="' + KINDLEBOX_FORM_ID + '" action="' + appUrl + '/activate" method="POST">' +
-        '          <input type="hidden" name="csrf_token" value="' + kindleboxCsrfToken + '">' +
-        '          <input type="hidden" name="kindle_names" value="">' +
-        '          <div id="' + KINDLEBOX_DEVICES_ID + '">' +
-        '          </div>' +
-        '        </form>' +
-        '      </div>' +
-        '      <div class="modal-footer">' +
-        '        <button id="activate-kindlebox-btn" type="button" class="btn btn-primary">Activate Kindlebox</button>' +
-        '    </div>' +
-        '  </div>' +
-        '  </div>' +
-        '</div>');
+  if ($("#" + KINDLEBOX_MODAL_ID).length > 0) {
+    return;
+  }
 
-    function activateKindlebox() {
-      var devices = $.makeArray($("#" + KINDLEBOX_FORM_ID).find(".kindlebox-device-checkbox:checked"));
-      var kindleNames = devices.map(function(device) {
-        return device.name;
-      });
-      $("[name='kindle_names']").val(JSON.stringify(kindleNames));
-      $("#" + KINDLEBOX_FORM_ID).submit();
+  var $modalHtml = $('<div class="modal fade" id="' + KINDLEBOX_MODAL_ID + '" tabindex="-1" role="dialog" aria-labelledby="' + KINDLEBOX_MODAL_ID + '" aria-hidden="true">' +
+      '  <div class="modal-dialog">' +
+      '    <div class="modal-content">' +
+      '      <div class="modal-header">' +
+      '      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>' +
+      '      <h2>Kindlebox</h2>' +
+      '      </div>' +
+      '      <div class="modal-body">' +
+      '        <b>Select your Kindle device(s)!</b>' +
+      '        <form id="' + KINDLEBOX_FORM_ID + '" action="' + appUrl + '/activate" method="POST">' +
+      '          <input type="hidden" name="csrf_token" value="' + kindleboxCsrfToken + '">' +
+      '          <input type="hidden" name="kindle_names" value="">' +
+      '          <div id="' + KINDLEBOX_DEVICES_ID + '">' +
+      '          </div>' +
+      '        </form>' +
+      '      </div>' +
+      '      <div class="modal-footer">' +
+      '        <div id="kindlebox-error" class="pull-left">' +
+      '          <b>Oops, no devices were selected! Try again :)</b>' +
+      '        </div>' +
+      '        <button id="activate-kindlebox-btn" type="button" class="btn btn-primary">Activate Kindlebox</button>' +
+      '    </div>' +
+      '  </div>' +
+      '  </div>' +
+      '</div>');
+
+  $modalHtml.find('#kindlebox-error').hide();
+
+  // Handler for submitting the picker form.
+  function activateKindlebox() {
+    var devices = $.makeArray($("#" + KINDLEBOX_FORM_ID).find(".kindlebox-device-checkbox:checked"));
+    if (devices.length == 0) {
+      $('#kindlebox-error').clearQueue().fadeIn().delay(3000).fadeOut();
+      return;
     }
-    $modalHtml.find("#activate-kindlebox-btn").click(function() {
-      whitelistEmailer(emailer, activateKindlebox);
+    var kindleNames = devices.map(function(device) {
+      return device.name;
     });
-
-    $('body').append($modalHtml);
+    $("[name='kindle_names']").val(JSON.stringify(kindleNames));
+    $("#" + KINDLEBOX_FORM_ID).submit();
   }
+  $modalHtml.find("#activate-kindlebox-btn").click(function() {
+    whitelistEmailer(emailer, activateKindlebox);
+  });
 
-  if ($('.kindlebox-device-checkbox').length != getNumDevices()) {
-    $("#" + KINDLEBOX_DEVICES_ID).empty();
-    var devices = getDevices();
-    for (var i = 0; i < devices.length; i++) {
-      var label = devices[i].tag;
-      if (devices[i].type) {
-        label += ' (' + devices[i].type + ')';
-      }
-      $("#" + KINDLEBOX_DEVICES_ID).append('<div class="checkbox">' +
-        '  <input type="checkbox" id="kindlebox-device-' + i + '" class="kindlebox-device-checkbox" name="' + devices[i].email + '">' +
-        '  <label for="kindlebox-device-' + i + '" class="kindlebox-device-label" style="">' +
-           label +
-         '</label>' +
-        '</div>');
+  // Add a checkbox for each device eligible for Kindlebox.
+  var devices = getDevices();
+  for (var i = 0; i < devices.length; i++) {
+    var label = devices[i].tag;
+    if (devices[i].type) {
+      label += ' (' + devices[i].type + ')';
     }
+    $modalHtml.find("#" + KINDLEBOX_DEVICES_ID).append('<div class="checkbox">' +
+      '  <input type="checkbox" id="kindlebox-device-' + i + '" class="kindlebox-device-checkbox" name="' + devices[i].email + '">' +
+      '  <label for="kindlebox-device-' + i + '" class="kindlebox-device-label" style="">' +
+         label +
+       '</label>' +
+      '</div>');
   }
+
+  $('body').append($modalHtml);
 }
 
 function showModal() {
