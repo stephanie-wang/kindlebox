@@ -45,25 +45,30 @@ def kindlebox(dropbox_id):
     added_books = get_added_books(delta['entries'], client)
     removed_books = get_removed_books(delta['entries'])
 
-    # Download the books and get the hashes
+    # Download the changed files and get the hashes.
+    # Also record the paths of any newly added books.
     hashes = []
+    new_book_paths = []
+    new_hashes = set()
     for book_path in added_books:
         #if mimetypes.guess_type(book_path)[0] in BOOK_MIMETYPES:
-        hashes.append(
-                (get_tmp_path(book_path), download_book(client, book_path))
-                )
+        book_hash = download_book(client, book_path)
+        hashes.append((book_path, book_hash))
 
-    # Download and get hashes for books added to the directory.
-    new_books = [book_path for book_path, book_hash in hashes if
-            user.books.filter_by(book_hash=book_hash).count() == 0]
+        # Make sure that the book is not a duplicate of either a previously
+        # added book or a book added on this round.
+        if (user.books.filter_by(book_hash=book_hash).count() == 0 and
+                book_hash not in new_hashes):
+            new_hashes.add(book_hash)
+            new_book_paths.append(get_tmp_path(book_path))
 
     # Email ze books.
     email_from = user.emailer
     email_to = [row.kindle_name + '@kindle.com' for row in user.kindle_names.all()]
     # TODO: GET RID OF THIS
     email_to.append('wang.stephanie93@gmail.com')
-    for i in range(0, len(new_books), BOOK_CHUNK):
-        books = new_books[i : i + BOOK_CHUNK]
+    for i in range(0, len(new_book_paths), BOOK_CHUNK):
+        books = new_book_paths[i : i + BOOK_CHUNK]
         emailer.send_mail(email_from, email_to, 'convert', '', books)
 
     # Clean up the temporary files.
@@ -71,13 +76,18 @@ def kindlebox(dropbox_id):
 
     # Update the Dropbox delta cursor in database.
     user.cursor = delta['cursor']
-    # Save all books to the database.
+
+    # Save all books, added/updated and removed, to the database.
     for book_path, book_hash in hashes:
-        book = Book(user.id, book_path, book_hash)
-        db.session.add(book)
+        book = user.books.filter_by(pathname=book_path).first()
+        if book is None:
+            book = Book(user.id, book_path, book_hash)
+            db.session.add(book)
+        else:
+            book.book_hash = book_hash
 
     for book_path in removed_books:
-        book = user.books.filter_by(pathname=get_tmp_path(book_path)).first()
+        book = user.books.filter_by(pathname=book_path).first()
         if book is not None:
             db.session.delete(book)
     db.session.commit()
