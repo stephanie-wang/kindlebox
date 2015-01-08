@@ -99,7 +99,8 @@ def download_book(client, book_path):
     tmp_path = get_tmp_path(book_path)
     try:
         book_dir = os.path.dirname(tmp_path)
-        os.makedirs(book_dir)
+        if book_dir != BASE_DIR:
+            os.makedirs(book_dir)
     except OSError:
         log.error("Error creating directories for book {0}".format(book_path),
                   exc_info=True)
