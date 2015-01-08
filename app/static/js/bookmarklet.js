@@ -86,7 +86,7 @@ function addModal(kindleboxCsrfToken, appUrl, emailer) {
       '      <h2>Kindlebox</h2>' +
       '      </div>' +
       '      <div class="modal-body">' +
-      '        <b>Select your Kindle device(s)!</b>' +
+      '        <b id="kindlebox-devices-label">Select your Kindle device(s)!</b>' +
       '        <form id="' + KINDLEBOX_FORM_ID + '" action="' + appUrl + '/activate" method="POST">' +
       '          <input type="hidden" name="csrf_token" value="' + kindleboxCsrfToken + '">' +
       '          <input type="hidden" name="kindle_names" value="">' +
@@ -125,17 +125,24 @@ function addModal(kindleboxCsrfToken, appUrl, emailer) {
 
   // Add a checkbox for each device eligible for Kindlebox.
   var devices = getDevices();
-  for (var i = 0; i < devices.length; i++) {
-    var label = devices[i].tag;
-    if (devices[i].type) {
-      label += ' (' + devices[i].type + ')';
+  if (devices.length == 0) {
+    $modalHtml.find('.modal-body').text('Oops, it seems you don\'t have any \
+        devices eligible for Kindlebox! Make sure to register a \
+        Kindle with this Amazon account before trying again :)')
+    $modalHtml.find('#activate-kindlebox-btn').attr('disabled', 'disabled');
+  } else {
+    for (var i = 0; i < devices.length; i++) {
+      var label = devices[i].tag;
+      if (devices[i].type) {
+        label += ' (' + devices[i].type + ')';
+      }
+      $modalHtml.find("#" + KINDLEBOX_DEVICES_ID).append('<div class="checkbox">' +
+        '  <input type="checkbox" id="kindlebox-device-' + i + '" class="kindlebox-device-checkbox" name="' + devices[i].email + '">' +
+        '  <label for="kindlebox-device-' + i + '" class="kindlebox-device-label" style="">' +
+           label +
+         '</label>' +
+        '</div>');
     }
-    $modalHtml.find("#" + KINDLEBOX_DEVICES_ID).append('<div class="checkbox">' +
-      '  <input type="checkbox" id="kindlebox-device-' + i + '" class="kindlebox-device-checkbox" name="' + devices[i].email + '">' +
-      '  <label for="kindlebox-device-' + i + '" class="kindlebox-device-label" style="">' +
-         label +
-       '</label>' +
-      '</div>');
   }
 
   $('body').append($modalHtml);
