@@ -57,8 +57,6 @@ def kindlebox(dropbox_id):
     new_book_paths = []
     new_hashes = set()
     for book_path in added_books:
-        if mimetypes.guess_type(book_path)[0] not in BOOK_MIMETYPES:
-            continue
         book_hash = download_book(client, book_path)
         hashes.append((book_path, book_hash))
 
@@ -100,14 +98,21 @@ def kindlebox(dropbox_id):
     return True
 
 
+def filter_supported_types(paths):
+    return [path for path in paths if mimetypes.guess_type(path) in
+            BOOK_MIMETYPES]
+
+
 def get_added_books(delta_entries, client):
-    return [canonicalize(entry[0]) for entry in delta_entries if entry[1] is
-            not None and not entry[1]['is_dir']]
+    added_entries = [canonicalize(entry[0]) for entry in delta_entries if
+                     entry[1] is not None and not entry[1]['is_dir']]
+    return filter_supported_types(added_entries)
 
 
 def get_removed_books(delta_entries):
-    return [canonicalize(entry[0]) for entry in delta_entries if entry[1] is
-            None]
+    removed_entries = [canonicalize(entry[0]) for entry in delta_entries if
+                       entry[1] is None]
+    return filter_supported_types(removed_entries)
 
 
 def download_book(client, book_path):
