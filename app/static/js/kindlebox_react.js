@@ -217,11 +217,14 @@ var ActiveMessage = React.createClass({
               sent to your Kindle.
             </h2>
           </div>
-          <div>
-            If you'd like to change your Kindle username, or
-            stop using Kindlebox completely, <a
-            onClick={this.deactivateHandler}
-            className="instruction-btn">click here</a>.
+          <div className="tip">
+            Tip: It may take a few minutes for your Kindle to download a book
+            after adding it to your Dropbox. Sit tight :)
+          </div>
+          <div className="tip">
+            If you'd like to update your Kindle devices, or stop using
+            Kindlebox completely, click <a onClick={this.deactivateHandler}
+            className="instruction-btn">here</a>.
           </div>
         </div>
       );
