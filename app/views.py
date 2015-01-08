@@ -154,8 +154,14 @@ def activate(dropbox_id):
         if user.kindle_names.first() is None:
             abort(400)
 
-        set_active(True, dropbox_id)
+        user.set_active(True)
         db.session.commit()
+
+        try:
+            kindlebox.delay(dropbox_id)
+        except:
+            # TODO: Log
+            pass
 
     return redirect(url_for('home'))
 
@@ -166,27 +172,12 @@ def deactivate(dropbox_id):
     user = User.query.filter_by(dropbox_id=dropbox_id).first()
     if user is not None and user.active:
         user.kindle_names.delete()
-        db.session.commit()
-    return set_active(False, dropbox_id)
-
-
-def set_active(active, dropbox_id):
-    response = {
-        'success': False,
-        }
-    user = User.query.filter_by(dropbox_id=dropbox_id).first()
-    if user is None:
-        return jsonify(response)
-
-    user.activate(active)
+    user.set_active(False)
     db.session.commit()
-    response['success'] = True
-    if active:
-        try:
-            kindlebox.delay(dropbox_id)
-        except:
-            return jsonify(response)
-    return jsonify(response)
+
+    return jsonify({
+            'success': True,
+            })
 
 
 @app.route('/dropbox-auth-finish')

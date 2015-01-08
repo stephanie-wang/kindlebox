@@ -23,7 +23,7 @@ class User(db.Model):
     def __init__(self, dropbox_id):
         self.dropbox_id = dropbox_id
 
-    def activate(self, active):
+    def set_active(self, active):
         self.active = active
 
     def set_new_emailer(self):
