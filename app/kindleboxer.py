@@ -99,7 +99,7 @@ def kindlebox(dropbox_id):
 
 
 def filter_supported_types(paths):
-    return [path for path in paths if mimetypes.guess_type(path) in
+    return [path for path in paths if mimetypes.guess_type(path)[0] in
             BOOK_MIMETYPES]
 
 
