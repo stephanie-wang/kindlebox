@@ -20,14 +20,20 @@ try:
 except OSError:
     pass
 
+# Supported filetypes.
+# According to:
+# http://www.amazon.com/gp/help/customer/display.html?nodeId=200375630
 mimetypes.add_type('application/x-mobipocket-ebook', '.mobi')
-mimetypes.add_type('application/epub+zip', '.epub')
+mimetypes.add_type('application/x-mobipocket-ebook', '.prc')
+mimetypes.add_type('application/vnd.amazon.ebook', '.azw')
+mimetypes.add_type('application/vnd.amazon.ebook', '.azw1')
+# Amazon doesn't allow epub :(
+#mimetypes.add_type('application/epub+zip', '.epub')
 BOOK_MIMETYPES = {
-    'application/pdf',
-    'application/x-mobipocket-ebook',
-    'application/epub+zip',
     'application/vnd.amazon.ebook',
     'text/plain',
+    'application/x-mobipocket-ebook',
+    'application/pdf',
     }
 BOOK_CHUNK = 5
 
@@ -51,7 +57,8 @@ def kindlebox(dropbox_id):
     new_book_paths = []
     new_hashes = set()
     for book_path in added_books:
-        #if mimetypes.guess_type(book_path)[0] in BOOK_MIMETYPES:
+        if mimetypes.guess_type(book_path)[0] not in BOOK_MIMETYPES:
+            continue
         book_hash = download_book(client, book_path)
         hashes.append((book_path, book_hash))
 
