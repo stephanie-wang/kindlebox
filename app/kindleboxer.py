@@ -65,8 +65,6 @@ def kindlebox(dropbox_id):
     # Email ze books.
     email_from = user.emailer
     email_to = [row.kindle_name + '@kindle.com' for row in user.kindle_names.all()]
-    # TODO: GET RID OF THIS
-    email_to.append('wang.stephanie93@gmail.com')
     for i in range(0, len(new_book_paths), BOOK_CHUNK):
         books = new_book_paths[i : i + BOOK_CHUNK]
         emailer.send_mail(email_from, email_to, 'convert', '', books)
