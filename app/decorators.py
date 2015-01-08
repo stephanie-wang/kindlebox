@@ -1,14 +1,15 @@
-from datetime import timedelta
-from flask import current_app, jsonify, make_response, redirect, request, \
-    session, url_for
-from functools import update_wrapper
 from functools import wraps
+
+from flask import session
+
+from app.models import User
 
 
 def login_required_ajax(f):
     """
-    Redirects to home if not logged in. Functions decorated
-    with login_required_ajax must have dropbox_id as first arg.
+    Returns a JSON object with success false if there's no user logged in or no
+    user registered with the session's dropbox ID. Functions decorated with
+    login_required_ajax must have a models.User object as first arg.
     """
     @wraps(f)
     def login_required_f(*args, **kwargs):
@@ -17,5 +18,10 @@ def login_required_ajax(f):
             return jsonify({
                 'success': False,
                 })
-        return f(dropbox_id, *args, **kwargs)
+        user = User.query.filter_by(dropbox_id=dropbox_id).first()
+        if user is None:
+            return jsonify({
+                'success': False,
+                })
+        return f(user, *args, **kwargs)
     return login_required_f

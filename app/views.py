@@ -68,20 +68,13 @@ def home():
 
 @app.route('/added-bookmarklet', methods=['POST'])
 @login_required_ajax
-def added_bookmarklet(dropbox_id):
-    response = {
-        'success': False,
-        }
-
-    user = User.query.filter_by(dropbox_id=dropbox_id).first()
-    if user is None:
-        return jsonify(response)
-
+def added_bookmarklet(user):
     user.set_added_bookmarklet()
     db.session.commit()
-    response['success'] = True
 
-    return jsonify(response)
+    return jsonify({
+        'success': True,
+        })
 
 
 def _logout():
@@ -115,19 +108,16 @@ def validate_kindle_name(kindle_name):
     return None
 
 
-@app.route('/active')
-@login_required_ajax
-def active(dropbox_id):
-    user = User.query.filter_by(dropbox_id=dropbox_id).first()
-    return jsonify({
-            'active': user.active,
-            })
-
-
 @app.route('/activate', methods=['POST'])
-@login_required_ajax
-def activate(dropbox_id):
+def activate():
+    dropbox_id = session.get('dropbox_id')
+    if dropbox_id is None:
+        abort(400)
+
     user = User.query.filter_by(dropbox_id=dropbox_id).first()
+    if user is None:
+        abort(400)
+
     if not user.active:
         if 'kindle_names' not in request.form:
             abort(400)
@@ -158,7 +148,7 @@ def activate(dropbox_id):
         db.session.commit()
 
         try:
-            kindlebox.delay(dropbox_id)
+            kindlebox.delay(user.dropbox_id)
         except:
             # TODO: Log
             pass
@@ -168,9 +158,8 @@ def activate(dropbox_id):
 
 @app.route('/deactivate', methods=['POST'])
 @login_required_ajax
-def deactivate(dropbox_id):
-    user = User.query.filter_by(dropbox_id=dropbox_id).first()
-    if user is not None and user.active:
+def deactivate(user):
+    if user.active:
         user.kindle_names.delete()
     user.set_active(False)
     db.session.commit()
