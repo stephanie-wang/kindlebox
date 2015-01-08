@@ -12,6 +12,7 @@ pull:
 	@echo "\nRunning any migrations..."
 	./run.py db upgrade
 	sudo service uwsgi restart
+	sudo service celeryd restart
 
 heroku:
 	@echo "Starting push to Heroku..."
