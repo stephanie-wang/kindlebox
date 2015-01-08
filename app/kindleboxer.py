@@ -116,10 +116,11 @@ def get_removed_books(delta_entries):
 
 
 def download_book(client, book_path):
+    # Make all the necessary nested directories in the temporary directory.
     tmp_path = get_tmp_path(book_path)
     try:
         book_dir = os.path.dirname(tmp_path)
-        if book_dir != BASE_DIR:
+        if not os.path.exists(book_dir):
             os.makedirs(book_dir)
     except OSError:
         log.error("Error creating directories for book {0}".format(book_path),
@@ -132,7 +133,7 @@ def download_book(client, book_path):
             tmp_book.write(data)
             md5.update(data)
 
-    book_hash = md5.digest().decode('iso-8859-1')
+    book_hash = md5.hexdigest()
 
     return book_hash
 
