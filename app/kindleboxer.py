@@ -66,12 +66,8 @@ def kindlebox(dropbox_id):
         books = new_books[i : i + BOOK_CHUNK]
         emailer.send_mail(email_from, email_to, 'convert', '', books)
 
-    for book_path in new_books:
-        try:
-            os.unlink(book_path)
-        except OSError:
-            log.error("Womp womp. Couldn't delete book %s. Not a file?" %
-                      book_path)
+    # Clean up the temporary files.
+    clear_tmp_directory()
 
     # Update the Dropbox delta cursor in database.
     user.cursor = delta['cursor']
@@ -100,14 +96,16 @@ def get_removed_books(delta_entries):
 
 
 def download_book(client, book_path):
+    tmp_path = get_tmp_path(book_path)
     try:
-        book_dir = os.path.dirname(book_path)
+        book_dir = os.path.dirname(tmp_path)
         os.makedirs(book_dir)
     except OSError:
-        pass
+        log.error("Error creating directories for book {0}".format(book_path),
+                  exc_info=True)
 
     md5 = hashlib.md5()
-    with open(get_tmp_path(book_path), 'w') as tmp_book:
+    with open(tmp_path, 'w') as tmp_book:
         with client.get_file(book_path) as book:
             data = book.read()
             tmp_book.write(data)
@@ -116,6 +114,26 @@ def download_book(client, book_path):
     book_hash = md5.digest().decode('iso-8859-1')
 
     return book_hash
+
+
+def _clear_directory(directory):
+    """
+    Remove all possible directories and files from a given directory.
+    """
+    for path in os.listdir(directory):
+        subdirectory = os.path.join(directory, path)
+        if os.path.isdir(subdirectory):
+            _clear_directory(subdirectory)
+            os.rmdir(subdirectory)
+        else:
+            os.unlink(subdirectory)
+
+
+def clear_tmp_directory():
+    """
+    Remove all possible directories and files from the temporary directory.
+    """
+    _clear_directory(BASE_DIR)
 
 
 def get_tmp_path(book_path):
