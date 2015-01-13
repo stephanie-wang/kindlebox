@@ -1,9 +1,86 @@
 {% extends "base.html" %}
 
+{% block css %}
+  <link href="static/css/about.css" rel="stylesheet">
+{% endblock %}
+
 {% block body %}
-<ul class="nav nav-pills nav-stacked">
-  <li class="active"><a href="#">Home</a></li>
-  <li><a href="#">Profile</a></li>
-  <li><a href="#">Messages</a></li>
+<ul id="faq">
+
+  <li id="faq-first" class="faq-li">
+    <b>How does Kindlebox work?</b>
+    <p>
+      Kindlebox works on top of Amazon's existing
+      <a href="http://www.amazon.com/gp/help/customer/display.html/?nodeId=200767340">Kindle Personal Documents Service</a>. Through
+      this service, you can give certain email addresses permission to send
+      documents to your Kindle, free of charge. Your Kindle can then download
+      these documents wirelessly.
+    </p>
+    <p>
+      Whenever you add a book to <code>Dropbox/Apps/kindle-box</code>, Kindlebox
+      is notified by
+      <a href="https://www.dropbox.com/developers/webhooks">Dropbox</a>.
+      Kindlebox then downloads the book through
+      <a href="https://www.dropbox.com/developers/core">Dropbox</a>
+      and emails it to your Kindle.
+    </p>
+  </li>
+
+  <li class="faq-li">
+    <b>Can I delete books from my Kindle using Kindlebox?</b>
+    <p>
+    Unfortunately, no. We'll have to wait for a Kindle API :(
+    </p>
+  </li>
+
+  <li class="faq-li">
+    <b>
+      I have some books that I've already transferred to my Kindle. If I add
+      them to my Kindlebox folder, will they get added to my Kindle again?
+    </b>
+    <p>
+      Unfortunately, yes. This is because Kindlebox has no way of knowing what
+      files are already on your Kindle.
+    </p>
+    <p>
+      There is a way around this, though.  Kindlebox will only send files of a
+      certain type, so if you rename a file with an unsupported file extension
+      (e.g. ".kbox"), it won't get sent to your Kindle. Make sure to do this
+      <i>before</i> you add the file to your Kindlebox folder.
+    </p>
+  </li>
+
+  <li class="faq-li">
+    <b>What kinds of reading devices can I use Kindlebox with?</b>
+    <p>
+    You can use Kindlebox with any Kindle e-reader or mobile app.
+    </p>
+  </li>
+
+  <li class="faq-li">
+    <b>
+      What does the "Activate Kindlebox" bookmarklet do? Should I be worried
+      about running this JavaScript in my browser?
+    </b>
+    <p>
+      The bookmarklet does a couple things. First, it scrapes the Amazon
+      <a href="https://www.amazon.com/mn/dcw/myx.html">Manage Your Content and Devices</a>
+      page for possible Kindlebox devices and displays them in a modal for you to
+      pick from. Second, the bookmarklet sends a request to Amazon to allow a
+      Kindlebox email address to send your Kindle devices personal documents. If
+      all goes well, the bookmarklet notifies Kindlebox that your account is all
+      set.
+    </p>
+  </li>
+
+  <li class="faq-li">
+    <b>
+      Where can I find the source code for Kindlebox?
+    </b>
+    <p>
+      <a href="https://github.com/stephanie-wang/kindlebox">Here</a> on GitHub.
+    </p>
+  </li>
+
 </ul>
 {% endblock %}

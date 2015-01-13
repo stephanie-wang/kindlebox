@@ -1,0 +1,11 @@
+#faq {
+   list-style-type: none;
+}
+
+.faq-li {
+  margin: 40px 0;
+}
+
+#faq-first {
+  margin-top: 20px;
+}
