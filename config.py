@@ -3,9 +3,14 @@ import os
 
 ### Environments ###
 # Configs for env DEV or PROD should be put in '<env>_config.py'
-DEBUG = os.getenv('DEBUG') is not None
+# Default to debug and dev true, prod false. Otherwise, debug and dev false,
+# prod true.
+DEBUG = os.getenv('DEBUG', True)
 DEV = os.getenv('DEV', DEBUG)
-PROD = os.getenv('PROD', False)
+PROD = os.getenv('PROD', not DEV)
+if PROD:
+    DEBUG = False
+    DEV = False
 
 
 ### Default settings ###
