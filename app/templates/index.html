@@ -6,9 +6,14 @@
 
 {% block scripts %}
     <script type="text/javascript" src="static/js/kindlebox_setup.js"></script>
-    <script type="text/jsx" src="static/js/kindlebox_react.js"></script>
+
+    {% if dev %}
+    <script type="text/jsx" src="static/js/src/kindlebox_react.js"></script>
     <script type="text/jsx">
-        /** @jsx React.DOM */
+    {% else %}
+    <script type="text/javascript" src="static/js/build/kindlebox_react.js"></script>
+    <script type="text/javascript">
+    {% endif %}
         function toBool(variable) {
             return variable === "True";
         }
@@ -26,14 +31,14 @@
             var loginUrl = "{{ url_for('login') }}";
         }
         React.renderComponent(
-          <InstructionTable loggedIn={ loggedIn }
-                            addedBookmarklet={ addedBookmarklet }
-                            active={ active }
-                            loginUrl={ loginUrl }
-                            emailer={ emailer }
-                            appUrl={ appUrl }
-                            kindleboxCsrfToken={ kindleboxCsrfToken }
-                            />,
+          React.createElement(InstructionTable, {loggedIn: loggedIn, 
+                            addedBookmarklet: addedBookmarklet, 
+                            active: active, 
+                            loginUrl: loginUrl, 
+                            emailer: emailer, 
+                            appUrl: appUrl, 
+                            kindleboxCsrfToken: kindleboxCsrfToken }
+                            ),
           document.getElementById('content')
         );
     </script>

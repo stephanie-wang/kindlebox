@@ -25,22 +25,22 @@ DROPBOX_APP_SECRET = app.config.get('DROPBOX_APP_SECRET', '')
 
 @app.errorhandler(404)
 def page_not_found(e):
-    return render_template('error.html'), 404
+    return render_template('error.html', dev=app.config['DEV']), 404
 
 
 @app.errorhandler(400)
 def error(e):
-    return render_template('error.html'), 400
+    return render_template('error.html', dev=app.config['DEV']), 400
 
 
 @app.route('/start')
 def splash():
-    return render_template('splash.html')
+    return render_template('splash.html', dev=app.config['DEV'])
 
 
 @app.route('/about')
 def about():
-    return render_template('about.html')
+    return render_template('about.html', dev=app.config['DEV'])
 
 
 @app.route('/')
@@ -63,7 +63,7 @@ def home():
         'emailer': user.emailer,
         'app_url': app.config['APP_URL'],
         }
-    return render_template('index.html', **response)
+    return render_template('index.html', dev=app.config['DEV'], **response)
 
 
 @app.route('/added-bookmarklet', methods=['POST'])

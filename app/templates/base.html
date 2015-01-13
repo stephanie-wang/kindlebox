@@ -49,8 +49,10 @@
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="static/js/lib/jquery-1.11.1.min.js"></script>
     <script type="text/javascript" src="static/js/lib/bootstrap.min.js"></script>
-    <script type="text/javascript" src="static/js/lib/react-with-addons.js"></script>
+    <script type="text/javascript" src="static/js/lib/react-with-addons.min.js"></script>
+    {% if dev %}
     <script type="text/javascript" src="static/js/lib/JSXTransformer.js"></script>
+    {% endif %}
     {% block scripts %}{% endblock %}
     <script type="text/javascript" src="//s7.addthis.com/js/300/addthis_widget.js#pubid=ra-53dff2a46a9f9d7c"></script>
   
