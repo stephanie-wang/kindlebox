@@ -34,6 +34,16 @@ BOOK_MIMETYPES = {
     'text/plain',
     'application/x-mobipocket-ebook',
     'application/pdf',
+
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/rtf',
+    'text/html',
+
+    'image/jpeg',
+    'image/gif',
+    'image/x-ms-bmp',
+    'image/png',
     }
 BOOK_CHUNK = 5
 
