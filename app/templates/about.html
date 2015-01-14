@@ -5,24 +5,42 @@
 {% endblock %}
 
 {% block body %}
+<h2>About Kindlebox</h2>
 <ul id="faq">
 
-  <li id="faq-first" class="faq-li">
-    <b>How does Kindlebox work?</b>
+  <li class="faq-li">
+    <b>
+      What is Kindlebox?
+    </b>
     <p>
-      Kindlebox works on top of Amazon's existing
-      <a href="http://www.amazon.com/gp/help/customer/display.html/?nodeId=200767340">Kindle Personal Documents Service</a>. Through
-      this service, you can give certain email addresses permission to send
-      documents to your Kindle, free of charge. Your Kindle can then download
-      these documents wirelessly.
+      Kindlebox is an easy way to transfer books to your Kindle using a Dropbox
+      folder.
+    </p>
+  </li>
+
+  <li class="faq-li">
+    <b>
+      How do I use Kindlebox?
+    </b>
+    <p>
+      It's simple! Just register
+      <a href="{{ url_for('home') }}?redirect=true">here</a>,
+      and start adding books to your <code>Dropbox/Apps/kindle-box</code>
+      folder. Any new books you add will get sent to your Kindle.
     </p>
     <p>
-      Whenever you add a book to <code>Dropbox/Apps/kindle-box</code>, Kindlebox
-      is notified by
-      <a href="https://www.dropbox.com/developers/webhooks">Dropbox</a>.
-      Kindlebox then downloads the book through
-      <a href="https://www.dropbox.com/developers/core">Dropbox</a>
-      and emails it to your Kindle.
+      This setup can be useful for sharing books with other Kindle users, such
+      as for a book club. For instance, you can create a shortcut to a shared
+      Dropbox folder in <code>Dropbox/Apps/kindle-box</code>. Then, anytime the
+      shared folder gets updated with new documents, you'll also receive them
+      on your own Kindle.
+    </p>
+  </li>
+
+  <li class="faq-li">
+    <b>What kind of reading devices can I use Kindlebox with?</b>
+    <p>
+    You can use Kindlebox with any Kindle e-reader or mobile app.
     </p>
   </li>
 
@@ -67,9 +85,30 @@
   </li>
 
   <li class="faq-li">
-    <b>What kinds of reading devices can I use Kindlebox with?</b>
+    <b>
+      Can I register for Kindlebox on mobile?
+    </b>
     <p>
-    You can use Kindlebox with any Kindle e-reader or mobile app.
+      Nope :( Perhaps in a galaxy far far away...
+    </p>
+  </li>
+
+  <li id="faq-first" class="faq-li">
+    <b>How does Kindlebox work under the hood?</b>
+    <p>
+      Kindlebox works on top of Amazon's existing
+      <a href="http://www.amazon.com/gp/help/customer/display.html/?nodeId=200767340">Kindle Personal Documents Service</a>. Through
+      this service, you can give certain email addresses permission to send
+      documents to your Kindle, free of charge. Your Kindle can then download
+      these documents wirelessly.
+    </p>
+    <p>
+      Whenever you add a book to <code>Dropbox/Apps/kindle-box</code>, Kindlebox
+      is notified by the
+      <a href="https://www.dropbox.com/developers/webhooks">Dropbox webhooks API</a>.
+      Kindlebox then downloads the book through the
+      <a href="https://www.dropbox.com/developers/core">Dropbox Core API</a>
+      and emails it to your Kindle.
     </p>
   </li>
 
