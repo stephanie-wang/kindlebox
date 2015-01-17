@@ -9,7 +9,6 @@ from app import celery
 from app import db
 from app import emailer
 from app.models import User, Book
-#from app.queue import queuefunc
 
 
 log = logging.getLogger()
@@ -48,7 +47,6 @@ BOOK_MIMETYPES = {
 BOOK_CHUNK = 5
 
 
-#@queuefunc
 @celery.task(ignore_result=True)
 def kindlebox(dropbox_id):
     user = User.query.filter_by(dropbox_id=dropbox_id, active=True).first()
