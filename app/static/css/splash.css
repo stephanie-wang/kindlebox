@@ -3,15 +3,12 @@
     width: 100%;
 }
 
-#dropbox-icon {
-    margin: 0 10px;
-}
-
 .icon {
-    max-width: 150px;
+    max-width: 20%;
     position: relative;
     top: -200px;
     opacity: 0;
+    margin: 0 10px;
 }
 
 #icon-container {
