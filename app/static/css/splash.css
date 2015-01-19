@@ -8,7 +8,7 @@
 }
 
 .icon {
-    width: 150px; 
+    max-width: 150px;
     position: relative;
     top: -200px;
     opacity: 0;
@@ -17,4 +17,9 @@
 #icon-container {
     font-size: 72px;
     margin: 50px 0;
+}
+
+#noun-project-credit {
+    font-size: 16px;
+    margin-top: 20px;
 }
