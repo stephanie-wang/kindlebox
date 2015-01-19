@@ -45,6 +45,17 @@ body {
 }
 
 #logo {
+  padding: 15px;
+}
+
+#logo-icon {
+    max-width: 40px;
+    max-height: 40px;
+    margin: 0 5px;
+    margin-top: -10px;
+}
+
+#logo-text {
     color: #eee;
     font-size: 22px;
 }
