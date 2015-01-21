@@ -49,10 +49,10 @@ body {
 }
 
 #logo-icon {
-    max-width: 40px;
-    max-height: 40px;
+    max-width: 100%;
+    max-height: 100%;
     margin: 0 5px;
-    margin-top: -10px;
+    margin-top: -5%;
 }
 
 #logo-text {
@@ -69,48 +69,29 @@ body {
     font-size: 18px;
 }
 
-/* Base instruction styles */
-.instruction {
-    float: left;
-    width: 80%;
-    padding: 20px 0px;
-    margin-top: -5px;
-}
-
-.instruction-btn {
-    cursor: pointer;
-}
-
-.instruction-action {
+.action {
     border-radius: 2px;
     border: solid #ccc 1px;
 }
 
-.instruction-action:focus, .instruction-action:hover {
-    border: solid #bbb 1px;
-    box-shadow: 0px 1px 2px 1px #eee;
+.action-content {
+  width: 100%;
+  float: left;
+  text-align: center;
 }
 
-.instruction-action-content {
-    text-align: center;
-    width: 50%;
-    margin: 0 auto;
+.action-content-inner {
+  display: inline-block;
 }
 
-.instruction-num {
-    font-size: 48px;
-    float: left;
-    margin-right: 5%;
-    margin-left: 5%;
-    width: 5%;
-    cursor: default;
+/* Base instruction styles */
+.padded {
+    padding: 20px 0px;
+    margin-top: -5px;
+}
 
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    -khtml-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
+.button {
+    cursor: pointer;
 }
 
 .instruction-row {
@@ -124,14 +105,8 @@ body {
     opacity: 0.4;
 }
 
-.instruction-action-inactive:focus, .instruction-action-inactive:hover {
-    border: solid #ccc 1px;
-    box-shadow: none;
-    cursor: default;
-    color: #428bca;
-}
-
 .start-stop {
+  float: left;
   width: 50%;
   margin: 30px 25%;
   color: white;

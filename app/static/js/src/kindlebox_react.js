@@ -21,20 +21,24 @@ var InstructionTable = React.createClass({
     var loginBtnClasses = React.addons.classSet({
       'instruction': true,
       'dropbox-action': true,
-      'instruction-action': true,
-      'instruction-action-inactive': this.props.loggedIn,
+      'action': true,
+      'action-inactive': this.props.loggedIn,
     });
     var loginInstruction = (
       <div className={instructionClasses}>
         <div className="instruction-num">
           1.
         </div>
-        <a className="instruction-btn"
+        <a className="instruction button"
               href={ this.props.loginUrl }>
           <div className={ loginBtnClasses }>
-            <div className="instruction-action-content">
-              <img className="dropbox-logo" src="static/img/dropbox.png"/>
-                Login with Dropbox
+            <div className="action-content">
+              <div className="action-content-inner">
+                <img className="dropbox-logo" src="static/img/dropbox.png"/>
+                <div id="dropbox-caption">
+                  Login with Dropbox
+                </div>
+              </div>
             </div>
           </div>
         </a>
@@ -172,7 +176,7 @@ var EmailerInstructions = React.createClass({
 
             Drag this bookmarklet to your bookmarks bar:
             <div id="bookmarklet-wrapper" onDragEnd={this.showInstruction}>
-              <a id="bookmarklet" className="instruction-action" href={bookmarklet}>Activate Kindlebox</a>
+              <a id="bookmarklet" className="action" href={bookmarklet}>Activate Kindlebox</a>
             </div>
 
           </div>
@@ -224,7 +228,7 @@ var ActiveMessage = React.createClass({
           <div className="tip">
             If you'd like to update your Kindle devices, or stop using
             Kindlebox completely, click <a onClick={this.deactivateHandler}
-            className="instruction-btn">here</a>.
+            className="button">here</a>.
           </div>
         </div>
       );

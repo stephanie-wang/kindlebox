@@ -1,20 +1,56 @@
+.instruction {
+    padding: 20px 0px;
+    margin-top: -5px;
+    width: 90%;
+    float: left;
+}
+
+.instruction-num {
+    width: 10%;
+    float: left;
+    font-size: 48px;
+    cursor: default;
+
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+@media (max-width: 600px) {
+  .instruction-num {
+    font-size: 32px;
+  }
+}
+
+@media (max-width: 320px) {
+  .instruction-num {
+    font-size: 24px;
+  }
+}
+
 .instruction-text {
+  width: 80%;
   margin-top: -15px;
 }
 
-.instruction-btn {
+.button {
     line-height: 32px;
-    margin: 0;
     margin-top: -5px;
     text-align: left;
 }
 
 /* 1. Dropbox button */
 .dropbox-logo {
-    width: 32px;
-    height: 32px;
-    margin-right: 15px;
-    float: left;
+    display: inline-block;
+    max-width: 15%;
+}
+
+#dropbox-caption {
+    display: inline-block;
+    margin-left: 5%;
 }
 
 /* 2. User kindle name and email form */
@@ -46,7 +82,6 @@
 
 /* 3. Emailer instructions */
 #bookmarklet-wrapper {
-  width: 50%;
   margin: 30px auto;
   text-align: center;
 }

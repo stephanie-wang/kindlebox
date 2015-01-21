@@ -7,18 +7,18 @@
 <div class="center">
   <div id="icon-container">
     <img class="icon" src="static/img/noun_24249_cc.png"/>
-    <span class="icon">
-      +
-    </span>
-    <img class="icon" src="static/img/noun_54054_cc.png"/>
+    <img id="plus-icon" class="icon" src="static/img/plus.png"/>
+    <img id="kindle-icon" class="icon" src="static/img/noun_54054_cc.png"/>
   </div>
 <h1>
   Kindlebox: Receive books on your Kindle through Dropbox.
 </h1>
-<a href="{{ url_for('home') }}?redirect=true" class="instruction-btn">
-  <div id="start" class="instruction instruction-action start-stop">
-    <div class="instruction-action-content">
-      Get Kindlebox
+<a href="{{ url_for('home') }}?redirect=true" class="button">
+  <div id="start" class="padded action start-stop">
+    <div class="action-content">
+      <div class="action-content-inner">
+        Get Kindlebox
+      </div>
     </div>
   </div>
 </a>
