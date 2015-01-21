@@ -87,6 +87,7 @@
 }
 
 #bookmarklet {
+  display: inline-block;
   background: #ddd;
   padding: 10px 20px;
 }
