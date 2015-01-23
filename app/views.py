@@ -5,8 +5,14 @@ import hmac
 
 from dropbox.client import DropboxClient
 from dropbox.client import DropboxOAuth2Flow
-from flask import request, session, redirect, url_for, abort, \
-    render_template, flash, jsonify
+from flask import request
+from flask import session
+from flask import redirect
+from flask import url_for
+from flask import abort
+from flask import render_template
+from flask import flash
+from flask import jsonify
 
 from app import app
 from app import csrf
@@ -49,6 +55,9 @@ def home():
     if dropbox_id is None and not request.args.get('redirect'):
         return redirect(url_for('splash'))
 
+    if request.MOBILE:
+        return render_template('mobile/index.html')
+
     # Use a blank user if no one's logged in.
     user = User.query.filter_by(dropbox_id=dropbox_id).first()
     logged_in = dropbox_id is not None and user is not None
@@ -62,6 +71,7 @@ def home():
         'active': user.active,
         'emailer': user.emailer,
         'app_url': app.config['APP_URL'],
+        'mobile': request.MOBILE,
         }
     return render_template('index.html', dev=app.config['DEV'], **response)
 
