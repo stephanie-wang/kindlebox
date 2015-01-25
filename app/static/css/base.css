@@ -41,7 +41,7 @@ body {
 }
 
 #content {
-    padding: 40px 15px;
+    padding: 30px 15px;
 }
 
 #logo {
@@ -82,6 +82,13 @@ body {
 
 .action-content-inner {
   display: inline-block;
+}
+
+.action-inactive:focus, .action-inactive:hover {
+    border: solid #ccc 1px;
+    box-shadow: none;
+    cursor: default;
+    color: #428bca;
 }
 
 /* Base instruction styles */
