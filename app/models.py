@@ -22,6 +22,8 @@ class User(db.Model):
 
     def __init__(self, dropbox_id):
         self.dropbox_id = dropbox_id
+        self.added_bookmarklet = False
+        self.active = False
 
     def set_active(self, active):
         self.active = active

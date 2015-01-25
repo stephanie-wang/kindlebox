@@ -31,22 +31,22 @@ DROPBOX_APP_SECRET = app.config.get('DROPBOX_APP_SECRET', '')
 
 @app.errorhandler(404)
 def page_not_found(e):
-    return render_template('error.html', dev=app.config['DEV']), 404
+    return render_kindlebox_template('error.html'), 404
 
 
 @app.errorhandler(400)
 def error(e):
-    return render_template('error.html', dev=app.config['DEV']), 400
+    return render_kindlebox_template('error.html'), 400
 
 
 @app.route('/start')
 def splash():
-    return render_template('splash.html', dev=app.config['DEV'])
+    return render_kindlebox_template('splash.html')
 
 
 @app.route('/about')
 def about():
-    return render_template('about.html', dev=app.config['DEV'])
+    return render_kindlebox_template('about.html')
 
 
 @app.route('/')
@@ -56,24 +56,22 @@ def home():
         return redirect(url_for('splash'))
 
     if request.MOBILE:
-        return render_template('mobile/index.html')
+        return render_kindlebox_template('mobile/index.html')
 
     # Use a blank user if no one's logged in.
     user = User.query.filter_by(dropbox_id=dropbox_id).first()
-    logged_in = dropbox_id is not None and user is not None
-    if not logged_in:
+    if user is None:
         user = User(dropbox_id)
 
     response = {
-        'logged_in': logged_in,
-        'name': user.name,
         'added_bookmarklet': user.added_bookmarklet,
         'active': user.active,
         'emailer': user.emailer,
         'app_url': app.config['APP_URL'],
         'mobile': request.MOBILE,
         }
-    return render_template('index.html', dev=app.config['DEV'], **response)
+
+    return render_kindlebox_template('index.html', **response)
 
 
 @app.route('/added-bookmarklet', methods=['POST'])
@@ -300,3 +298,24 @@ def register_gmail_emailer(emailer_base):
          emailer_arg,
          '--compressed']
     return subprocess.check_call(request_args) == 0
+
+
+def get_logged_in_info():
+    logged_in_info = {
+            'logged_in': False,
+            'name': '',
+            }
+    dropbox_id = session.get('dropbox_id')
+    if dropbox_id is not None:
+        user = User.query.filter_by(dropbox_id=dropbox_id).first()
+        if user is not None:
+            logged_in_info['logged_in'] = True
+            logged_in_info['name'] = user.name
+
+    return logged_in_info
+
+
+def render_kindlebox_template(template, **args):
+    args['dev'] = app.config['DEV']
+    args.update(get_logged_in_info())
+    return render_template(template, **args)

@@ -36,14 +36,14 @@
             </span>
           </a>
         </div>
+        {% if logged_in %}
         <div class="collapse navbar-collapse">
-          {% if logged_in %}
           <ul class="nav navbar-nav pull-right">
             <li class="active"><a id="navbar-welcome">Welcome, {{ name }}</a></li>
             <li class="active"><a id="navbar-logout" href="{{ url_for('logout') }}">Logout</a></li>
           </ul>
-          {% endif %}
         </div><!--/.nav-collapse -->
+        {% endif %}
       </div>
     </div>
 
