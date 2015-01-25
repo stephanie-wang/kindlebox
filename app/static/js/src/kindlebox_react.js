@@ -174,7 +174,9 @@ var EmailerInstructions = React.createClass({
           </div>
           <div className="instruction instruction-text">
 
-            Drag this bookmarklet to your bookmarks bar:
+            Drag this bookmarklet to your bookmarks bar (if you've added the
+                bookmarklet previously, delete the old one and add again):
+
             <div id="bookmarklet-wrapper" onDragEnd={this.showInstruction}>
               <a id="bookmarklet" className="action" href={bookmarklet}>Activate Kindlebox</a>
             </div>
