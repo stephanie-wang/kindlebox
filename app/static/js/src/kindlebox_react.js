@@ -215,20 +215,12 @@ var ActiveMessage = React.createClass({
   render: function() {
     return (
         <div>
-          <div>
-            <h2>
-              Success! Any books you add to <code>Dropbox/Apps/kindle-box</code> will now be
-              sent to your Kindle.
-            </h2>
-          </div>
-          <div className="tip">
-            Tip: It may take a few minutes for your Kindle to download a book
-            after adding it to your Dropbox. Sit tight :)
-          </div>
+          <h2>Success! Read the PDF below for final instructions.</h2>
+          <iframe id="pdf-reader" src="static/kindlebox_welcome.pdf#view=fit"></iframe>
           <div className="tip">
             If you'd like to update your Kindle devices, or stop using
-            Kindlebox completely, click <a onClick={this.deactivateHandler}
-            className="button">here</a>.
+            Kindlebox completely, <a onClick={this.deactivateHandler}
+            className="button">click here</a>.
           </div>
         </div>
       );

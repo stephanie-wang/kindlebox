@@ -48,6 +48,31 @@ BOOK_CHUNK = 5
 
 
 @celery.task(ignore_result=True)
+def upload_welcome_pdf(dropbox_id):
+    user = User.query.filter_by(dropbox_id=dropbox_id,
+                                active=True,
+                                uploaded_welcome_pdf=False).first()
+    if user is None:
+        return False
+
+    client = DropboxClient(user.access_token)
+    try:
+        with open('app/static/kindlebox_welcome.pdf', 'rb') as f:
+            response = client.put_file('Welcome to Kindlebox.pdf', f)
+            if response:
+                log.info("Welcome PDF sent to Dropbox ID {0}.".format(str(dropbox_id)))
+            else:
+                raise Exception("No response received after sending welcome PDF")
+
+        user.set_uploaded_welcome_pdf()
+        db.session.commit()
+
+    except:
+        log.error(("Welcome PDF failed for Dropbox ID "
+                   "{0}.").format(str(dropbox_id)), exc_info=True)
+
+
+@celery.task(ignore_result=True)
 def kindlebox(dropbox_id):
     user = User.query.filter_by(dropbox_id=dropbox_id, active=True).first()
     if user is None:

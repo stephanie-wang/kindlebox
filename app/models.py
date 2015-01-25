@@ -9,6 +9,7 @@ class User(db.Model):
     name = db.Column(db.String(80))
     emailer = db.Column(db.String(120), unique=True)
     added_bookmarklet = db.Column(db.Boolean)
+    uploaded_welcome_pdf = db.Column(db.Boolean)
     active = db.Column(db.Boolean)
     access_token = db.Column(db.Text)
     cursor = db.Column(db.Text)
@@ -23,6 +24,7 @@ class User(db.Model):
     def __init__(self, dropbox_id):
         self.dropbox_id = dropbox_id
         self.added_bookmarklet = False
+        self.uploaded_welcome_pdf = False
         self.active = False
 
     def set_active(self, active):
@@ -36,6 +38,9 @@ class User(db.Model):
 
     def set_added_bookmarklet(self):
         self.added_bookmarklet = True
+
+    def set_uploaded_welcome_pdf(self):
+        self.uploaded_welcome_pdf = True
 
 
 class Book(db.Model):

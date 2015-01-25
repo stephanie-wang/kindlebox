@@ -19,6 +19,7 @@ from app import csrf
 from app import db
 from app.decorators import login_required_ajax
 from app.kindleboxer import kindlebox
+from app.kindleboxer import upload_welcome_pdf
 from app.models import User
 from app.models import KindleName
 
@@ -156,7 +157,7 @@ def activate():
         db.session.commit()
 
         try:
-            kindlebox.delay(user.dropbox_id)
+            upload_welcome_pdf.delay(user.dropbox_id)
         except:
             # TODO: Log
             pass
