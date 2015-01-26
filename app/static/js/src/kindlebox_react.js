@@ -18,19 +18,23 @@ var InstructionTable = React.createClass({
       'instruction-row': true,
       'instruction-completed': this.props.loggedIn,
     });
+    var loginAnchorClasses = React.addons.classSet({
+      'button-inactive': this.props.loggedIn,
+      'instruction': true,
+      'button': false,
+    });
     var loginBtnClasses = React.addons.classSet({
       'instruction': true,
       'dropbox-action': true,
       'action': true,
-      'action-inactive': this.props.loggedIn,
     });
+
     var loginInstruction = (
       <div className={instructionClasses}>
         <div className="instruction-num">
           1.
         </div>
-        <a className="instruction button"
-              href={ this.props.loginUrl }>
+        <a id="login-button" className={loginAnchorClasses} href={ this.props.loginUrl }>
           <div className={ loginBtnClasses }>
             <div className="action-content">
               <div className="action-content-inner">

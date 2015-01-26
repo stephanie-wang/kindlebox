@@ -53,6 +53,10 @@
     margin-left: 5%;
 }
 
+#login-button {
+    margin-bottom: 30px;
+}
+
 /* 2. User kindle name and email form */
 #user-info-form {
     margin: 0;

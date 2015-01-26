@@ -84,13 +84,6 @@ body {
   display: inline-block;
 }
 
-.action-inactive:focus, .action-inactive:hover {
-    border: solid #ccc 1px;
-    box-shadow: none;
-    cursor: default;
-    color: #428bca;
-}
-
 /* Base instruction styles */
 .padded {
     padding: 20px 0px;
@@ -99,6 +92,11 @@ body {
 
 .button {
     cursor: pointer;
+}
+
+.button-inactive {
+    pointer-events: none;
+    cursor: default;
 }
 
 .instruction-row {
