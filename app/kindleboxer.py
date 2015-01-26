@@ -127,7 +127,8 @@ def kindlebox(dropbox_id):
         emailer.send_mail(email_from, email_to, 'convert', '', books)
 
     # Clean up the temporary files.
-    clear_tmp_directory()
+    if len(added_books) > 0:
+        clear_tmp_directory()
 
     # Update the Dropbox delta cursor in database.
     user.cursor = delta['cursor']
@@ -209,11 +210,15 @@ def clear_tmp_directory():
     """
     Remove all possible directories and files from the temporary directory.
     """
-    _clear_directory(BASE_DIR)
+    try:
+        _clear_directory(os.path.join(BASE_DIR, str(os.getpid())))
+        os.rmdir(os.path.join(BASE_DIR, str(os.getpid())))
+    except OSError:
+        log.error("Failed to clear tmp directory", exc_info=True)
 
 
 def get_tmp_path(book_path):
-    return os.path.join(BASE_DIR, book_path.strip('/'))
+    return os.path.join(BASE_DIR, str(os.getpid()), book_path.strip('/'))
 
 
 def canonicalize(pathname):
