@@ -3,6 +3,7 @@
 default:
 	DEBUG=1
 	-sudo rabbitmq-server --detached
+	~/redis-2.8.12/src/redis-server &
 	python run.py runserver
 
 pull:

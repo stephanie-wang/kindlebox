@@ -317,6 +317,6 @@ def get_logged_in_info():
 
 
 def render_kindlebox_template(template, **args):
-    args['dev'] = app.config['DEV']
+    args['dev'] = app.config.get('DEV', False)
     args.update(get_logged_in_info())
     return render_template(template, **args)

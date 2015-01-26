@@ -23,8 +23,10 @@ SECRET_KEY = ''
 
 SQLALCHEMY_DATABASE_URI = 'postgres://sxwang@localhost/kindlebox'
 
-REDIS_URI = 'redis://localhost:6379'
-REDIS_QUEUE_KEY = 'dropbox_delta_ids'
+# Redis cache defaults.
+REDIS_HOST = 'localhost'
+REDIS_PORT = 6379
+REDIS_PASSWORD = None
 
 CELERY_BROKER_URL = 'amqp://guest:guest@localhost//'
 

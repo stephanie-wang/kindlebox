@@ -6,6 +6,7 @@ from flask.ext.sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CsrfProtect
 
 from celery import Celery
+from redis import StrictRedis
 
 
 def make_celery(app):
@@ -34,5 +35,10 @@ manager.add_command('db', MigrateCommand)
 
 Mobility(app)
 
+redis = StrictRedis(host=app.config.get('REDIS_HOST'),
+                    port=app.config.get('REDIS_PORT'),
+                    password=app.config.get('REDIS_PASSWORD'))
 
-from app import views, models
+
+from app import models
+from app import views

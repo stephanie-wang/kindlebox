@@ -2,16 +2,21 @@ import hashlib
 import logging
 import mimetypes
 import os
+import time
 
 from dropbox.client import DropboxClient
 
 from app import celery
 from app import db
 from app import emailer
+from app import redis
 from app.models import User, Book
 
 
 log = logging.getLogger()
+
+# Lock expires in 5 minutes.
+LOCK_EXPIRE = 60 * 5
 
 BASE_DIR = '/tmp/kindlebox'
 try:
@@ -60,7 +65,7 @@ def upload_welcome_pdf(dropbox_id):
         with open('app/static/kindlebox_welcome.pdf', 'rb') as f:
             response = client.put_file('Welcome to Kindlebox.pdf', f)
             if response:
-                log.info("Welcome PDF sent to Dropbox ID {0}.".format(str(dropbox_id)))
+                log.info("Welcome PDF sent to Dropbox ID {0}.".format(dropbox_id))
             else:
                 raise Exception("No response received after sending welcome PDF")
 
@@ -69,11 +74,25 @@ def upload_welcome_pdf(dropbox_id):
 
     except:
         log.error(("Welcome PDF failed for Dropbox ID "
-                   "{0}.").format(str(dropbox_id)), exc_info=True)
+                   "{0}.").format(dropbox_id), exc_info=True)
 
 
 @celery.task(ignore_result=True)
 def kindlebox(dropbox_id):
+    # Lock per user.
+    lock_id = '{0}-lock-{1}'.format(kindlebox.__name__, dropbox_id)
+    lock = redis.lock(lock_id, timeout=LOCK_EXPIRE)
+
+    # If unable to acquire lock, wait a bit and then add to the queue again.
+    if not lock.acquire(blocking=False):
+        log.debug("Couldn't acquire lock {0}.".format(lock_id))
+        time.sleep(5)
+        kindlebox.delay(dropbox_id)
+        return False
+
+    log.debug("Lock {0} acquired.".format(lock_id))
+
+    # Only process Dropbox changes for active users.
     user = User.query.filter_by(dropbox_id=dropbox_id, active=True).first()
     if user is None:
         return False
@@ -127,6 +146,8 @@ def kindlebox(dropbox_id):
         if book is not None:
             db.session.delete(book)
     db.session.commit()
+
+    lock.release()
 
     return True
 
