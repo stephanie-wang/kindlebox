@@ -178,7 +178,12 @@ var EmailerInstructions = React.createClass({
                 bookmarklet previously, delete the old one and add again):
 
             <div id="bookmarklet-wrapper" onDragEnd={this.showInstruction}>
-              <a id="bookmarklet" className="action" href={bookmarklet}>Activate Kindlebox</a>
+              <a id="bookmarklet" className="action" href={bookmarklet}
+                  onMouseOver={this.showBookmarkletArrow}
+                  onMouseLeave={this.hideBookmarkletArrow}>
+                Activate Kindlebox
+              </a>
+              <img id="bookmarklet-arrow" ref="bookmarkletArrow" src="static/img/arrow.png" />
             </div>
 
           </div>
@@ -210,6 +215,14 @@ var EmailerInstructions = React.createClass({
         this.props.addedBookmarkletHandler();
       }
     }.bind(this));
+  },
+  showBookmarkletArrow: function() {
+    var bookmarkletArrow = this.refs.bookmarkletArrow.getDOMNode();
+    $(bookmarkletArrow).fadeTo(400, 1);
+  },
+  hideBookmarkletArrow: function() {
+    var bookmarkletArrow = this.refs.bookmarkletArrow.getDOMNode();
+    $(bookmarkletArrow).fadeTo(400, 0);
   },
 });
 

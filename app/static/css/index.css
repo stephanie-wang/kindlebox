@@ -80,6 +80,14 @@
     margin: 10px 0;
 }
 
+#bookmarklet-arrow {
+    height: 125px;
+    position: absolute;
+    margin-top: -100;
+    margin-left: 15px;
+    opacity: 0;
+}
+
 /* 3. Emailer instructions */
 #bookmarklet-wrapper {
   margin: 30px auto;
