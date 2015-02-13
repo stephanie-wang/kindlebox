@@ -311,6 +311,7 @@ def get_logged_in_info():
         user = User.query.filter_by(dropbox_id=dropbox_id).first()
         if user is not None:
             logged_in_info['logged_in'] = True
+            logged_in_info['user_id'] = user.id
             logged_in_info['name'] = user.name
 
     return logged_in_info

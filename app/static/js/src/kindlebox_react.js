@@ -52,6 +52,8 @@ var InstructionTable = React.createClass({
     var emailerInstructions;
     if (this.props.loggedIn) {
       emailerInstructions = <EmailerInstructions
+          userId={this.props.userId}
+          username={this.props.username}
           kindleboxCsrfToken={this.state.kindleboxCsrfToken}
           appUrl={this.state.appUrl}
           addedBookmarklet={this.state.addedBookmarklet}
@@ -71,6 +73,7 @@ var InstructionTable = React.createClass({
     this.setState({
       "addedBookmarklet": true,
     });
+    analytics.track('Added bookmarklet');
   },
   deactivateHandler: function() {
     $.post('/deactivate', function(res) {
@@ -79,7 +82,15 @@ var InstructionTable = React.createClass({
           'active': false,
         });
       }
-    }.bind(this));
+      analytics.track('Deactivated account', {
+        success: res.success,
+      });
+    }.bind(this))
+      .fail(function() {
+        analytics.track('Deactivated account', {
+          success: false
+        });
+      });
   },
 });
 
@@ -152,6 +163,11 @@ var EmailerInstructions = React.createClass({
             "} " +
           "}, 10);" +
         "});" +
+        "!function(){var analytics=window.analytics=window.analytics||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error(\"Segment snippet included twice.\");else{analytics.invoked=!0;analytics.methods=[\"trackSubmit\",\"trackClick\",\"trackLink\",\"trackForm\",\"pageview\",\"identify\",\"group\",\"track\",\"ready\",\"alias\",\"page\",\"once\",\"off\",\"on\"];analytics.factory=function(t){return function(){var e=Array.prototype.slice.call(arguments);e.unshift(t);analytics.push(e);return analytics}};for(var t=0;t<analytics.methods.length;t++){var e=analytics.methods[t];analytics[e]=analytics.factory(e)}analytics.load=function(t){var e=document.createElement(\"script\");e.type=\"text/javascript\";e.async=!0;e.src=(\"https:\"===document.location.protocol?\"https://\":\"http://\")+\"cdn.segment.com/analytics.js/v1/\"+t+\"/analytics.min.js\";var n=document.getElementsByTagName(\"script\")[0];n.parentNode.insertBefore(e,n)};analytics.SNIPPET_VERSION=\"3.0.1\";" +
+      "analytics.load(\"2afEcXvTS827n9aLqcisLOjJH1XF83uB\");" +
+      "analytics.track(\"Clicked bookmarklet\");" +
+      "analytics.identify(\"" + this.props.userId + "\", {name: \"" + this.props.username + "\"});" +
+      "}}();" +
       "}())";
 
 
@@ -198,7 +214,7 @@ var EmailerInstructions = React.createClass({
           </div>
           <div className="instruction instruction-text">
 
-            Next, visit <a href="https://www.amazon.com/manageyourkindle"
+            Next, visit <a id="amazon-link" href="https://www.amazon.com/manageyourkindle"
             target="_blank">Manage Your Content and Devices</a> on Amazon.
             Click the bookmarklet on your bookmarks bar from step 2, pick your
             Kindle devices, and you're good to go!
@@ -246,5 +262,8 @@ var ActiveMessage = React.createClass({
   },
   deactivateHandler: function() {
     this.props.deactivateHandler();
+  },
+  componentDidMount: function() {
+    analytics.track('Activated account');
   },
 });

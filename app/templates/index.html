@@ -27,8 +27,10 @@
         {% endif %}
         var appUrl = "{{ app_url }}";
         var loginUrl = "";
+        var userId = "{{ user_id }}";
+        var username = "{{ name }}";
         if (! loggedIn) {
-            var loginUrl = "{{ url_for('login') }}";
+            loginUrl = "{{ url_for('login') }}";
         }
         React.renderComponent(
           React.createElement(InstructionTable, {loggedIn: loggedIn, 
@@ -37,9 +39,16 @@
                             loginUrl: loginUrl, 
                             emailer: emailer, 
                             appUrl: appUrl, 
-                            kindleboxCsrfToken: kindleboxCsrfToken }
+                            kindleboxCsrfToken: kindleboxCsrfToken,
+                            userId: userId,
+                            username: username, }
                             ),
           document.getElementById('content')
         );
+
+        var loginLink = document.getElementById('login-button');
+        var amazonLink = document.getElementById('amazon-link');
+        analytics.trackLink(loginLink, 'Logged in');
+        analytics.trackLink(amazonLink, 'Opened Amazon');
     </script>
 {% endblock %}
