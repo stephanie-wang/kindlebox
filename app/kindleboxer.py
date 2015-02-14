@@ -6,6 +6,7 @@ import time
 
 from dropbox.client import DropboxClient
 
+from app import analytics
 from app import celery
 from app import db
 from app import emailer
@@ -59,6 +60,8 @@ def upload_welcome_pdf(dropbox_id):
                                 uploaded_welcome_pdf=False).first()
     if user is None:
         return False
+
+    analytics.track(str(user.id), 'Sent welcome pdf')
 
     client = DropboxClient(user.access_token)
     try:
@@ -149,6 +152,8 @@ def kindlebox(dropbox_id):
     db.session.commit()
 
     lock.release()
+
+    analytics.track(str(user.id), 'Kindleboxed')
 
     return True
 

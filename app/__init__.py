@@ -5,6 +5,7 @@ from flask.ext.script import Manager
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CsrfProtect
 
+import analytics
 from celery import Celery
 from redis import StrictRedis
 
@@ -38,6 +39,8 @@ Mobility(app)
 redis = StrictRedis(host=app.config.get('REDIS_HOST'),
                     port=app.config.get('REDIS_PORT'),
                     password=app.config.get('REDIS_PASSWORD'))
+
+analytics.write_key = '2afEcXvTS827n9aLqcisLOjJH1XF83uB'
 
 
 from app import models

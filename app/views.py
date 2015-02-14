@@ -14,6 +14,7 @@ from flask import render_template
 from flask import flash
 from flask import jsonify
 
+from app import analytics
 from app import app
 from app import csrf
 from app import db
@@ -205,6 +206,7 @@ def dropbox_auth_finish():
         return redirect(url_for('home'))
 
     user = User.query.filter_by(dropbox_id=dropbox_id).first()
+    new_user = user is None
     if user is None:
         user = User(dropbox_id)
         # TODO: Log error
@@ -214,6 +216,10 @@ def dropbox_auth_finish():
     user.access_token = access_token
     user.name = get_dropbox_name(access_token)
     db.session.commit()
+
+    if new_user:
+        analytics.track(str(user.id), 'Registered')
+    analytics.track(str(user.id), 'Logged in')
 
     session['dropbox_id'] = user.dropbox_id
 
