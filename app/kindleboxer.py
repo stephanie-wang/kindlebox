@@ -95,84 +95,94 @@ def kindlebox(dropbox_id):
 
     log.debug("Lock {0} acquired.".format(lock_id))
 
-    # Only process Dropbox changes for active users.
-    user = User.query.filter_by(dropbox_id=dropbox_id, active=True).first()
-    if user is None:
-        return False
+    try:
+        # Only process Dropbox changes for active users.
+        user = User.query.filter_by(dropbox_id=dropbox_id, active=True).first()
+        if user is None:
+            return False
 
-    client = DropboxClient(user.access_token)
-    delta = client.delta(user.cursor)
+        client = DropboxClient(user.access_token)
+        delta = client.delta(user.cursor)
 
-    added_books = get_added_books(delta['entries'], client)
-    removed_books = get_removed_books(delta['entries'])
+        added_books = get_added_books(delta['entries'], client)
+        removed_books = get_removed_books(delta['entries'])
 
-    # Download the changed files and get the hashes.
-    # Also record the paths of any newly added books.
-    hashes = []
-    new_book_paths = []
-    new_hashes = set()
-    for book_path in added_books:
-        book_hash = download_book(client, book_path)
-        hashes.append((book_path, book_hash))
+        # Download the changed files and get the hashes.
+        # Also record the paths of any newly added books.
+        hashes = []
+        new_book_paths = []
+        new_hashes = set()
+        num_bytes_emailed = 0
+        for book_path, book_byte_size in added_books:
+            book_hash = download_book(client, book_path)
+            hashes.append((book_path, book_hash))
 
-        # Make sure that the book is not a duplicate of either a previously
-        # added book or a book added on this round.
-        if (user.books.filter_by(book_hash=book_hash).count() == 0 and
-                book_hash not in new_hashes):
-            new_hashes.add(book_hash)
-            new_book_paths.append(get_tmp_path(book_path))
+            # Make sure that the book is not a duplicate of either a previously
+            # added book or a book added on this round.
+            if (user.books.filter_by(book_hash=book_hash).count() == 0 and
+                    book_hash not in new_hashes):
+                new_hashes.add(book_hash)
+                new_book_paths.append(get_tmp_path(book_path))
+                num_bytes_emailed += book_byte_size
 
-    # Email ze books.
-    email_from = user.emailer
-    email_to = [row.kindle_name + '@kindle.com' for row in user.kindle_names.all()]
-    for i in range(0, len(new_book_paths), BOOK_CHUNK):
-        books = new_book_paths[i : i + BOOK_CHUNK]
-        emailer.send_mail(email_from, email_to, 'convert', '', books)
+        # Email ze books.
+        email_from = user.emailer
+        email_to = [row.kindle_name + '@kindle.com' for row in user.kindle_names.all()]
+        for i in range(0, len(new_book_paths), BOOK_CHUNK):
+            books = new_book_paths[i : i + BOOK_CHUNK]
+            emailer.send_mail(email_from, email_to, 'convert', '', books)
 
-    # Clean up the temporary files.
-    if len(added_books) > 0:
-        clear_tmp_directory()
+        # Clean up the temporary files.
+        if len(added_books) > 0:
+            clear_tmp_directory()
 
-    # Update the Dropbox delta cursor in database.
-    user.cursor = delta['cursor']
+        # Update the Dropbox delta cursor in database.
+        user.cursor = delta['cursor']
 
-    # Save all books, added/updated and removed, to the database.
-    for book_path, book_hash in hashes:
-        book = user.books.filter_by(pathname=book_path).first()
-        if book is None:
-            book = Book(user.id, book_path, book_hash)
-            db.session.add(book)
-        else:
-            book.book_hash = book_hash
+        # Save all books, added/updated and removed, to the database.
+        for book_path, book_hash in hashes:
+            book = user.books.filter_by(pathname=book_path).first()
+            if book is None:
+                book = Book(user.id, book_path, book_hash)
+                db.session.add(book)
+            else:
+                book.book_hash = book_hash
 
-    for book_path in removed_books:
-        book = user.books.filter_by(pathname=book_path).first()
-        if book is not None:
-            db.session.delete(book)
-    db.session.commit()
+        for book_path in removed_books:
+            book = user.books.filter_by(pathname=book_path).first()
+            if book is not None:
+                db.session.delete(book)
+        db.session.commit()
 
-    lock.release()
+        analytics.track(str(user.id), 'Kindleboxed', {
+            'num_bytes_emailed': num_bytes_emailed,
+            'num_books_emailed': len(new_book_paths),
+            'num_books_deleted': len(removed_books),
+            })
 
-    analytics.track(str(user.id), 'Kindleboxed')
+        return True
 
-    return True
+    except:
+        log.error(("Failed to process dropbox webhook for dropbox id "
+                   "{0}.").format(dropbox_id), exc_info=True)
+    finally:
+        lock.release()
 
 
-def filter_supported_types(paths):
-    return [path for path in paths if mimetypes.guess_type(path)[0] in
-            BOOK_MIMETYPES]
+def mimetypes_filter(path):
+    return mimetypes.guess_type(path)[0] in BOOK_MIMETYPES
 
 
 def get_added_books(delta_entries, client):
-    added_entries = [canonicalize(entry[0]) for entry in delta_entries if
+    added_entries = [(canonicalize(entry[0]), entry[1]['bytes']) for entry in delta_entries if
                      entry[1] is not None and not entry[1]['is_dir']]
-    return filter_supported_types(added_entries)
+    return [entry for entry in added_entries if mimetypes_filter(entry[0])]
 
 
 def get_removed_books(delta_entries):
     removed_entries = [canonicalize(entry[0]) for entry in delta_entries if
                        entry[1] is None]
-    return filter_supported_types(removed_entries)
+    return [entry for entry in removed_entries if mimetypes_filter(entry)]
 
 
 def download_book(client, book_path):
