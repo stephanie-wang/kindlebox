@@ -82,12 +82,12 @@ var InstructionTable = React.createClass({
           'active': false,
         });
       }
-      analytics.track('Deactivated account', {
+      analytics.track('Clicked deactivate button', {
         success: res.success,
       });
     }.bind(this))
       .fail(function() {
-        analytics.track('Deactivated account', {
+        analytics.track('Clicked deactivate button', {
           success: false
         });
       });
@@ -264,6 +264,6 @@ var ActiveMessage = React.createClass({
     this.props.deactivateHandler();
   },
   componentDidMount: function() {
-    analytics.track('Activated account');
+    analytics.track('Viewed activation page');
   },
 });

@@ -163,6 +163,8 @@ def activate():
             # TODO: Log
             pass
 
+        analytics.track(str(user.id), 'Activated account')
+
     return redirect(url_for('home'))
 
 
@@ -173,6 +175,8 @@ def deactivate(user):
         user.kindle_names.delete()
     user.set_active(False)
     db.session.commit()
+
+    analytics.track(str(user.id), 'Deactivated account')
 
     return jsonify({
             'success': True,
