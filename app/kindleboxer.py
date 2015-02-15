@@ -175,16 +175,18 @@ def kindlebox(dropbox_id):
                 book.book_hash = book_hash
 
         log.debug("Deleting {0} books".format(len(removed_books)))
+        num_books_deleted = 0
         for book_path in removed_books:
             book = user.books.filter_by(pathname=book_path).first()
             if book is not None:
                 db.session.delete(book)
+                num_books_deleted += 1
         db.session.commit()
 
         analytics.track(str(user.id), 'Kindleboxed', {
             'num_bytes_emailed': sum(added_book_sizes[book] for book in new_books),
             'num_books_emailed': len(new_books),
-            'num_books_deleted': len(removed_books),
+            'num_books_deleted': num_books_deleted,
             })
 
         return True
@@ -202,9 +204,9 @@ def mimetypes_filter(path):
 
 def get_added_book_sizes(delta_entries, client):
     """
-    Return a list of tuples of (book path, book size), where book path must be
-    of one of the accepted mimetypes and book size is under the
-    BOOK_SIZE_LIMIT.
+    Return a list of tuples of (book path, book size) representing books added
+    during this delta. Book path must be of one of the accepted mimetypes and
+    book size is under the BOOK_SIZE_LIMIT.
     """
     added_entries = [(canonicalize(entry[0]), entry[1]['bytes']) for entry in delta_entries if
                      entry[1] is not None and not entry[1]['is_dir']]
@@ -213,6 +215,9 @@ def get_added_book_sizes(delta_entries, client):
 
 
 def get_removed_books(delta_entries):
+    """
+    Return a list of book paths that were deleted during this delta.
+    """
     removed_entries = [canonicalize(entry[0]) for entry in delta_entries if
                        entry[1] is None]
     return [entry for entry in removed_entries if mimetypes_filter(entry)]
@@ -271,11 +276,3 @@ def get_tmp_path(book_path):
 
 def canonicalize(pathname):
     return pathname.lower()
-
-
-def main():
-    pass
-
-
-if __name__ == '__main__':
-    main()
