@@ -25,6 +25,11 @@ try:
 except OSError:
     pass
 
+# Can only email books under 50MB...which is huge.
+BOOK_SIZE_LIMIT = 50 * (10**6)
+# And can only email 25 books at a time.
+BOOK_ATTACHMENTS_LIMIT = 25
+
 # Supported filetypes.
 # According to:
 # http://www.amazon.com/gp/help/customer/display.html?nodeId=200375630
@@ -104,16 +109,18 @@ def kindlebox(dropbox_id):
         client = DropboxClient(user.access_token)
         delta = client.delta(user.cursor)
 
-        added_books = get_added_books(delta['entries'], client)
+        added_book_sizes = dict(get_added_book_sizes(delta['entries'], client))
         removed_books = get_removed_books(delta['entries'])
 
         # Download the changed files and get the hashes.
         # Also record the paths of any newly added books.
         hashes = []
-        new_book_paths = []
+        new_books = []
         new_hashes = set()
-        num_bytes_emailed = 0
-        for book_path, book_byte_size in added_books:
+        for book_path, book_byte_size in added_book_sizes.iteritems():
+            if book_byte_size > BOOK_SIZE_LIMIT:
+                continue
+
             book_hash = download_book(client, book_path)
             hashes.append((book_path, book_hash))
 
@@ -122,18 +129,33 @@ def kindlebox(dropbox_id):
             if (user.books.filter_by(book_hash=book_hash).count() == 0 and
                     book_hash not in new_hashes):
                 new_hashes.add(book_hash)
-                new_book_paths.append(get_tmp_path(book_path))
-                num_bytes_emailed += book_byte_size
+                new_books.append(book_path)
 
         # Email ze books.
         email_from = user.emailer
         email_to = [row.kindle_name + '@kindle.com' for row in user.kindle_names.all()]
-        for i in range(0, len(new_book_paths), BOOK_CHUNK):
-            books = new_book_paths[i : i + BOOK_CHUNK]
-            emailer.send_mail(email_from, email_to, 'convert', '', books)
+        attached_books = []
+        attachment_size = 0
+        for book in new_books:
+            # If the next book will put us over the limit, or if we've reached
+            # 25 files currently, send off a batch email of books.
+            if (attachment_size + added_book_sizes[book] > BOOK_SIZE_LIMIT or
+                len(attached_books) == BOOK_ATTACHMENTS_LIMIT):
+                log.debug("Sending {0} books of size {1}".format(len(attached_books), attachment_size))
+                emailer.send_mail(email_from, email_to, 'convert', '', attached_books)
+                attached_books = []
+                attachment_size = 0
+
+            attached_books.append(get_tmp_path(book))
+            attachment_size += added_book_sizes[book]
+
+        # If there were any books added, send off the remainder of the batch.
+        if len(attached_books) > 0:
+            log.debug("Sending {0} books of size {1}".format(len(attached_books), attachment_size))
+            emailer.send_mail(email_from, email_to, 'convert', '', attached_books)
 
         # Clean up the temporary files.
-        if len(added_books) > 0:
+        if len(added_book_sizes) > 0:
             clear_tmp_directory()
 
         # Update the Dropbox delta cursor in database.
@@ -148,6 +170,7 @@ def kindlebox(dropbox_id):
             else:
                 book.book_hash = book_hash
 
+        log.debug("Deleting {0} books".format(len(removed_books)))
         for book_path in removed_books:
             book = user.books.filter_by(pathname=book_path).first()
             if book is not None:
@@ -155,8 +178,8 @@ def kindlebox(dropbox_id):
         db.session.commit()
 
         analytics.track(str(user.id), 'Kindleboxed', {
-            'num_bytes_emailed': num_bytes_emailed,
-            'num_books_emailed': len(new_book_paths),
+            'num_bytes_emailed': sum(added_book_sizes[book] for book in new_books),
+            'num_books_emailed': len(new_books),
             'num_books_deleted': len(removed_books),
             })
 
@@ -173,7 +196,7 @@ def mimetypes_filter(path):
     return mimetypes.guess_type(path)[0] in BOOK_MIMETYPES
 
 
-def get_added_books(delta_entries, client):
+def get_added_book_sizes(delta_entries, client):
     added_entries = [(canonicalize(entry[0]), entry[1]['bytes']) for entry in delta_entries if
                      entry[1] is not None and not entry[1]['is_dir']]
     return [entry for entry in added_entries if mimetypes_filter(entry[0])]
