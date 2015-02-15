@@ -61,10 +61,14 @@ BOOK_CHUNK = 5
 @celery.task(ignore_result=True)
 def upload_welcome_pdf(dropbox_id):
     user = User.query.filter_by(dropbox_id=dropbox_id,
-                                active=True,
-                                uploaded_welcome_pdf=False).first()
+                                active=True).first()
     if user is None:
         return False
+
+    # If we've already sent the welcome PDF before, Dropbox webhook went
+    # trigger, so do it here.
+    if user.uploaded_welcome_pdf:
+        return kindlebox(dropbox_id)
 
     analytics.track(str(user.id), 'Sent welcome pdf')
 
@@ -83,6 +87,9 @@ def upload_welcome_pdf(dropbox_id):
     except:
         log.error(("Welcome PDF failed for Dropbox ID "
                    "{0}.").format(dropbox_id), exc_info=True)
+        return False
+
+    return True
 
 
 @celery.task(ignore_result=True)
