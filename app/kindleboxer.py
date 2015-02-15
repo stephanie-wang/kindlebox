@@ -118,6 +118,8 @@ def kindlebox(dropbox_id):
 
         added_book_sizes = dict(get_added_book_sizes(delta['entries'], client))
         removed_books = get_removed_books(delta['entries'])
+        log.debug("Delta contains {0} added books, {1} removed "
+                  "books".format(len(added_book_sizes), len(removed_books)))
 
         # Download the changed files and get the hashes.
         # Also record the paths of any newly added books.
@@ -174,7 +176,6 @@ def kindlebox(dropbox_id):
             else:
                 book.book_hash = book_hash
 
-        log.debug("Deleting {0} books".format(len(removed_books)))
         num_books_deleted = 0
         for book_path in removed_books:
             book = user.books.filter_by(pathname=book_path).first()
