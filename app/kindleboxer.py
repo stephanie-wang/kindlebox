@@ -125,9 +125,6 @@ def kindlebox(dropbox_id):
         new_books = []
         new_hashes = set()
         for book_path, book_byte_size in added_book_sizes.iteritems():
-            if book_byte_size > BOOK_SIZE_LIMIT:
-                continue
-
             book_hash = download_book(client, book_path)
             hashes.append((book_path, book_hash))
 
@@ -204,9 +201,15 @@ def mimetypes_filter(path):
 
 
 def get_added_book_sizes(delta_entries, client):
+    """
+    Return a list of tuples of (book path, book size), where book path must be
+    of one of the accepted mimetypes and book size is under the
+    BOOK_SIZE_LIMIT.
+    """
     added_entries = [(canonicalize(entry[0]), entry[1]['bytes']) for entry in delta_entries if
                      entry[1] is not None and not entry[1]['is_dir']]
-    return [entry for entry in added_entries if mimetypes_filter(entry[0])]
+    return [entry for entry in added_entries if (mimetypes_filter(entry[0]) and
+            entry[1] < BOOK_SIZE_LIMIT)]
 
 
 def get_removed_books(delta_entries):
