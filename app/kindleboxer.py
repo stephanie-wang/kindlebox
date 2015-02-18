@@ -28,8 +28,9 @@ except OSError:
 
 # Can only email books under 50MB...which is huge.
 BOOK_SIZE_LIMIT = 50 * (10**6)
-# And can only email 25 books at a time.
+# And can only email 25 books at a time. Gmail only allows 25MB total.
 BOOK_ATTACHMENTS_LIMIT = 25
+ATTACHMENTS_SIZE_LIMIT = 25 * (10**6)
 
 # Supported filetypes.
 # According to:
@@ -150,7 +151,7 @@ def kindlebox(dropbox_id):
         for book in new_books:
             # If the next book will put us over the limit, or if we've reached
             # 25 files currently, send off a batch email of books.
-            if (attachment_size + added_book_sizes[book] > BOOK_SIZE_LIMIT or
+            if (attachment_size + added_book_sizes[book] > ATTACHMENTS_SIZE_LIMIT or
                 len(attached_books) == BOOK_ATTACHMENTS_LIMIT):
                 log.debug("Sending {0} books of size {1}".format(len(attached_books), attachment_size))
                 emailer.send_mail(email_from, email_to, 'convert', '', attached_books)
