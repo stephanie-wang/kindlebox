@@ -13,6 +13,7 @@ from flask import abort
 from flask import render_template
 from flask import flash
 from flask import jsonify
+from validate_email import validate_email
 
 from app import analytics
 from app import app
@@ -105,14 +106,15 @@ def logout():
 
 
 def validate_kindle_name(kindle_name):
-    # TODO: Use validate_email library
     # Check for duplicates? Might end up blocking real users...
     kindle_name = kindle_name.lower()
 
     if kindle_name.endswith('@free.kindle.com'):
         kindle_name = kindle_name[:-len('@free.kindle.com')] + '@kindle.com'
 
-    if kindle_name.endswith('@kindle.com'):
+    # We could use pyDNS here to check for an SMTP server, but we're filtering
+    # by @kindle.com anyway.
+    if kindle_name.endswith('@kindle.com') and validate_email(kindle_name):
         return kindle_name[:-len('@kindle.com')]
 
     return None
