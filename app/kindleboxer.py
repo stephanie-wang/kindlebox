@@ -2,6 +2,7 @@ import hashlib
 import logging
 import mimetypes
 import os
+import subprocess
 import time
 
 from dropbox.client import DropboxClient
@@ -37,9 +38,13 @@ mimetypes.add_type('application/x-mobipocket-ebook', '.mobi')
 mimetypes.add_type('application/x-mobipocket-ebook', '.prc')
 mimetypes.add_type('application/vnd.amazon.ebook', '.azw')
 mimetypes.add_type('application/vnd.amazon.ebook', '.azw1')
-# Amazon doesn't allow epub :(
-#mimetypes.add_type('application/epub+zip', '.epub')
+
+# Amazon doesn't support epub, but we do!
+mimetypes.add_type('application/epub+zip', '.epub')
+EPUB_MIMETYPE = 'application/epub+zip'
+
 BOOK_MIMETYPES = {
+    'application/epub+zip',
     'application/vnd.amazon.ebook',
     'text/plain',
     'application/x-mobipocket-ebook',
@@ -152,7 +157,11 @@ def kindlebox(dropbox_id):
                 attached_books = []
                 attachment_size = 0
 
-            attached_books.append(get_tmp_path(book))
+            tmp_path = get_tmp_path(book)
+            mobi_tmp_path = epub_to_mobi_path(tmp_path)
+            if mobi_tmp_path is not None:
+                tmp_path = mobi_tmp_path
+            attached_books.append(tmp_path)
             attachment_size += added_book_sizes[book]
 
         # If there were any books added, send off the remainder of the batch.
@@ -242,9 +251,18 @@ def download_book(client, book_path):
             tmp_book.write(data)
             md5.update(data)
 
+    mobi_tmp_path = epub_to_mobi_path(tmp_path)
+    if mobi_tmp_path is not None:
+        subprocess.check_call(['ebook-convert', tmp_path, mobi_tmp_path])
+
     book_hash = md5.hexdigest()
 
     return book_hash
+
+
+def epub_to_mobi_path(epub_path):
+    if mimetypes.guess_type(epub_path)[0] == EPUB_MIMETYPE:
+        return epub_path[:-len('epub')] + 'mobi'
 
 
 def _clear_directory(directory):
