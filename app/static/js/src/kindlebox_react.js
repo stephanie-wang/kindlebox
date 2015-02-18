@@ -148,9 +148,6 @@ var EmailerInstructions = React.createClass({
         "if (document.getElementsByClassName(\"kindlebox-source\").length == sources.length) {" +
           "sources = [];" +
         "}" +
-        "if (location.origin != 'https://www.amazon.com') {" +
-          "return;" +
-        "}" +
         "addExternalSources(sources, function() {" +
           "setDevice(1);" +
           "var waitDevices = setInterval(function() {" +
