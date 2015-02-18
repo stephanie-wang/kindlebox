@@ -23,24 +23,26 @@
       How do I use Kindlebox?
     </b>
     <p>
-      It's simple! Just register
-      <a href="{{ url_for('home') }}?redirect=true">here</a>,
-      and start adding books to your <code>Dropbox/Apps/kindle-box</code>
-      folder. Any new books you add will get sent to your Kindle.
+      It's simple! Just <a href="{{ url_for('home') }}?redirect=true">register
+      here</a>, and start adding books to your
+      <code>Dropbox/Apps/kindle-box</code> folder. Any new books you add will
+      get sent to your Kindle.
     </p>
   </li>
 
   <li class="faq-li">
     <b>
-      How can I use Kindlebox to share books with friends?
+      Can I use Kindlebox to share books with friends?
     </b>
     <p>
-      Easy, just follow these steps:
+      Yup, just follow these steps:
       <ol>
         <li>Create a folder for books in your <code>Dropbox</code> folder.</li>
-        <li>Go to the Dropbox website, and share the folder with a friend.</li>
-        <li>Using a file manager like "Finder" on Mac OS, create a shortcut to the shared folder inside <code>Dropbox/Apps/kindle-box</code>.</li>
-        <li>Have your friend create the same shortcut to their copy of the
+        <li>Go to the <a href="https://www.dropbox.com/">Dropbox website</a>,
+        and share the folder with a friend.</li>
+        <li>Using a file manager like "Finder" on Mac OS, create a shortcut to
+        the shared folder inside <code>Dropbox/Apps/kindle-box</code>.</li>
+        <li>Have your friend create a similar shortcut to their copy of the
         shared folder. Now you'll both receive any books that get added to the
         folder!</li>
       </ol>
@@ -67,6 +69,25 @@
         <li>.txt, .rtf, .doc, .docx, .htm, .html</li>
         <li>.gif, .png, .bmp, .jpg, .jpeg</li>
       </ul>
+    </p>
+  </li>
+
+  <li class="faq-li">
+    <b>
+        Help! I've added books to my Kindlebox folder, but I haven't received
+        them on my Kindle for some reason.
+    </b>
+    <p>
+        First things first, make sure your Kindle is connected to WiFi, and
+        wait a few minutes. Because Kindlebox depends on Internet connections
+        to both Dropbox and Amazon, there could be a slight delay in receiving
+        your books.
+    </p>
+    <p>
+        If you still haven't received the file, make sure that it's of one of
+        the supported filetypes listed above and that it's below 50MB. If all
+        else fails, <a href="mailto:wang.stephanie93@gmail.com">send us an
+        email</a> detailing what happened.
     </p>
   </li>
 
@@ -115,7 +136,7 @@
     <p>
       Whenever you add a book to <code>Dropbox/Apps/kindle-box</code>, Kindlebox
       is notified by the
-      <a href="https://www.dropbox.com/developers/webhooks">Dropbox webhooks API</a>.
+      <a href="https://www.dropbox.com/developers/webhooks">Dropbox webhooks service</a>.
       Kindlebox then downloads the book through the
       <a href="https://www.dropbox.com/developers/core">Dropbox Core API</a>
       and emails it to your Kindle.
