@@ -11,14 +11,10 @@ from email import Encoders
 from app import app
 
 
-EMAILER_ADDRESS = app.config['EMAILER_ADDRESS']
 EMAILER_PASSWORD = app.config['EMAILER_PASSWORD']
-#KINDLE_USER = [settings.KINDLE_USER]
 
 def send_mail(send_from, send_to, subject, text, files=[], server='smtp.gmail.com'):
-    #assert type(send_to)!=list
     assert type(files)==list
-    #send_to = [send_to]
 
     msg = MIMEMultipart()
     msg['From'] = send_from
@@ -44,10 +40,5 @@ def send_mail(send_from, send_to, subject, text, files=[], server='smtp.gmail.co
     else:
         smtpserver = smtplib.SMTP(server)
 
-    for email in send_to:
-        smtpserver.sendmail(send_from, email, msg.as_string())
+    smtpserver.sendmail(send_from, send_to, msg.as_string())
     smtpserver.close()
-
-if __name__ == '__main__':
-    send_mail(EMAILER_ADDRESS, KINDLE_USER, 'Hello world', 'hello world', [],
-            'smtp.gmail.com')
