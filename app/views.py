@@ -2,6 +2,7 @@
 import simplejson as json
 import hashlib
 import hmac
+import logging
 
 from dropbox.client import DropboxClient
 from dropbox.client import DropboxOAuth2Flow
@@ -25,6 +26,8 @@ from app.kindleboxer import upload_welcome_pdf
 from app.models import User
 from app.models import KindleName
 
+
+log = logging.getLogger()
 
 DEBUG = app.config.get('DEBUG', False)
 
@@ -89,7 +92,6 @@ def added_bookmarklet(user):
 
 
 def _logout():
-    # TODO: clear any other session args
     session.pop('dropbox_id', None)
 
 
@@ -162,7 +164,8 @@ def activate():
         try:
             upload_welcome_pdf.delay(user.dropbox_id)
         except:
-            # TODO: Log
+            log.error("Unable to add upload welcome PDF task for dropbox id "
+                      "{0}".format(user.dropbox_id), exc_info=True)
             pass
 
         analytics.track(str(user.id), 'Activated account')
@@ -208,15 +211,16 @@ def dropbox_auth_finish():
         abort(403)
 
     if dropbox_id is None:
-        # TODO: log?
         return redirect(url_for('home'))
 
     user = User.query.filter_by(dropbox_id=dropbox_id).first()
     new_user = user is None
     if user is None:
         user = User(dropbox_id)
-        # TODO: Log error
-        error = register_gmail_emailer(user.set_new_emailer())
+        if not register_gmail_emailer(user.set_new_emailer()):
+            log.error("Failed to register user with dropbox id "
+                      "{0}".format(dropbox_id))
+            abort(400)
         db.session.add(user)
 
     user.access_token = access_token
@@ -282,36 +286,48 @@ def get_dropbox_name(access_token):
 def register_gmail_emailer(emailer_base):
     import subprocess
 
-    cookie = app.config.get('EMAILER_SEND_AS_COOKIE', None)
-    if cookie is None:
-        return False
-    emailer_arg = 'cfrp=1&cfss=&cfsp=587&cfsl=&cfsr=&cfn=Kindle+Box&cfa=kindleboxed%2B{emailer}%40gmail.com&cfia=on&cfrt='.format(emailer=emailer_base)
+    try:
+        for key in ('EMAILER_SEND_AS_COOKIE',
+                    'EMAILER_SEND_AS_HOST',
+                    'EMAILER_SEND_AS_REFERER'):
+            if key not in app.config:
+                log.error("Failed to register emailer "
+                          "kindleboxed+{0}@gmail.com, no {1}".format(emailer_base,
+                                                                     key),
+                          exc_info=True)
+                return False
 
-    request_args = ['curl',
-         'https://mail.google.com/mail/?ui=2&ik=8ac11efc4f&view=cf&at=AF6bupOHMQUuohfutB0FBuEjaSTAw0TEzQ',
-         app.config.get('EMAILER_SEND_AS_HOST', ''),
-         '-H',
-         'origin: https://mail.google.com',
-         '-H',
-         'accept-encoding: gzip,deflate',
-         '-H',
-         'accept-language: en-US,en;q=0.8',
-         '-H',
-         'user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.120 Safari/537.36',
-         '-H',
-         'content-type: application/x-www-form-urlencoded',
-         '-H',
-         'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-         '-H',
-         'cache-control: max-age=0',
-         '-H',
-         'cookie: ' + cookie,
-         '-H',
-         'referer: ' + app.config.get('EMAILER_SEND_AS_REFERER', ''),
-         '--data',
-         emailer_arg,
-         '--compressed']
-    return subprocess.check_call(request_args) == 0
+        emailer_arg = 'cfrp=1&cfss=&cfsp=587&cfsl=&cfsr=&cfn=Kindle+Box&cfa=kindleboxed%2B{emailer}%40gmail.com&cfia=on&cfrt='.format(emailer=emailer_base)
+
+        request_args = ['curl',
+             'https://mail.google.com/mail/?ui=2&ik=8ac11efc4f&view=cf&at=AF6bupOHMQUuohfutB0FBuEjaSTAw0TEzQ',
+             app.config.get('EMAILER_SEND_AS_HOST', ''),
+             '-H',
+             'origin: https://mail.google.com',
+             '-H',
+             'accept-encoding: gzip,deflate',
+             '-H',
+             'accept-language: en-US,en;q=0.8',
+             '-H',
+             'user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.120 Safari/537.36',
+             '-H',
+             'content-type: application/x-www-form-urlencoded',
+             '-H',
+             'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+             '-H',
+             'cache-control: max-age=0',
+             '-H',
+             'cookie: ' + app.config.get('EMAILER_SEND_AS_COOKIE', ''),
+             '-H',
+             'referer: ' + app.config.get('EMAILER_SEND_AS_REFERER', ''),
+             '--data',
+             emailer_arg,
+             '--compressed']
+        return subprocess.check_call(request_args) == 0
+    except:
+        log.error("Failed to register emailer "
+                  "kindleboxed+{0}@gmail.com".format(emailer_base), exc_info=True)
+        return False
 
 
 def get_logged_in_info():
