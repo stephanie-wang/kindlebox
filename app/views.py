@@ -282,13 +282,14 @@ def get_dropbox_name(access_token):
 def register_gmail_emailer(emailer_base):
     import subprocess
 
-    cookie = app.config.get('EMAILER_COOKIE', None)
+    cookie = app.config.get('EMAILER_SEND_AS_COOKIE', None)
     if cookie is None:
         return False
     emailer_arg = 'cfrp=1&cfss=&cfsp=587&cfsl=&cfsr=&cfn=Kindle+Box&cfa=kindleboxed%2B{emailer}%40gmail.com&cfia=on&cfrt='.format(emailer=emailer_base)
 
     request_args = ['curl',
          'https://mail.google.com/mail/?ui=2&ik=8ac11efc4f&view=cf&at=AF6bupOHMQUuohfutB0FBuEjaSTAw0TEzQ',
+         app.config.get('EMAILER_SEND_AS_HOST', ''),
          '-H',
          'origin: https://mail.google.com',
          '-H',
@@ -306,7 +307,7 @@ def register_gmail_emailer(emailer_base):
          '-H',
          'cookie: ' + cookie,
          '-H',
-         'referer: https://mail.google.com/mail/?ui=2&ik=8ac11efc4f&view=cf&at=AF6bupOHMQUuohfutB0FBuEjaSTAw0TEzQ',
+         'referer: ' + app.config.get('EMAILER_SEND_AS_REFERER', ''),
          '--data',
          emailer_arg,
          '--compressed']
