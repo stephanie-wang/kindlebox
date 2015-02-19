@@ -317,6 +317,8 @@ def register_gmail_emailer(emailer_base):
              '-H',
              'cache-control: max-age=0',
              '-H',
+             'cookie: ' + app.config.get('EMAILER_SEND_AS_COOKIE', ''),
+             '-H',
              'referer: ' + app.config.get('EMAILER_SEND_AS_REFERER', ''),
              '--data',
              emailer_arg,
