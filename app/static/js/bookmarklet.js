@@ -54,7 +54,7 @@ function whitelistEmailer(emailer, successCallback) {
     return;
   }
 
-  $.post('https://www.amazon.com/mn/dcw/myx/ajax-activity', {
+  $.post(document.location.origin + '/mn/dcw/myx/ajax-activity', {
     "data": '{"param":{"WhitelistEmail":{"newEmail":"' + emailer + '"}}}',
     "csrfToken": csrfToken,
   }, function(res) {
