@@ -26,8 +26,6 @@ try:
 except OSError:
     pass
 
-# Can only email books under 50MB...which is huge.
-BOOK_SIZE_LIMIT = 50 * (10**6)
 # And can only email 25 books at a time. Sendgrid only allows 25MB total.
 BOOK_ATTACHMENTS_LIMIT = 25
 ATTACHMENTS_SIZE_LIMIT = 20 * (10**6)
@@ -237,7 +235,7 @@ def get_added_book_sizes(delta_entries, client):
     added_entries = [(canonicalize(entry[0]), entry[1]['bytes']) for entry in delta_entries if
                      entry[1] is not None and not entry[1]['is_dir']]
     return [entry for entry in added_entries if (mimetypes_filter(entry[0]) and
-            entry[1] < BOOK_SIZE_LIMIT)]
+            entry[1] < ATTACHMENTS_SIZE_LIMIT)]
 
 
 def get_removed_books(delta_entries):
