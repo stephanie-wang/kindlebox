@@ -292,12 +292,12 @@ def register_gmail_emailer(emailer_base):
                     'EMAILER_SEND_AS_REFERER'):
             if key not in app.config:
                 log.error("Failed to register emailer "
-                          "kindleboxed+{0}@gmail.com, no {1}".format(emailer_base,
+                          "kindleboxed2+{0}@gmail.com, no {1}".format(emailer_base,
                                                                      key),
                           exc_info=True)
                 return False
 
-        emailer_arg = 'cfrp=1&cfss=&cfsp=587&cfsl=&cfsr=&cfn=Kindle+Box&cfa=kindleboxed%2B{emailer}%40gmail.com&cfia=on&cfrt='.format(emailer=emailer_base)
+        emailer_arg = 'cfrp=1&cfss=&cfsp=587&cfsl=&cfsr=&cfn=Kindle+Box&cfa=kindleboxed2%2B{emailer}%40gmail.com&cfia=on&cfrt='.format(emailer=emailer_base)
 
         request_args = ['curl',
              'https://mail.google.com/mail/?ui=2&ik=8ac11efc4f&view=cf&at=AF6bupOHMQUuohfutB0FBuEjaSTAw0TEzQ',
@@ -317,8 +317,6 @@ def register_gmail_emailer(emailer_base):
              '-H',
              'cache-control: max-age=0',
              '-H',
-             'cookie: ' + app.config.get('EMAILER_SEND_AS_COOKIE', ''),
-             '-H',
              'referer: ' + app.config.get('EMAILER_SEND_AS_REFERER', ''),
              '--data',
              emailer_arg,
@@ -326,7 +324,7 @@ def register_gmail_emailer(emailer_base):
         return subprocess.check_call(request_args) == 0
     except:
         log.error("Failed to register emailer "
-                  "kindleboxed+{0}@gmail.com".format(emailer_base), exc_info=True)
+                  "kindleboxed2+{0}@gmail.com".format(emailer_base), exc_info=True)
         return False
 
 
