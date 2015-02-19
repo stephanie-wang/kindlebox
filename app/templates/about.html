@@ -185,7 +185,7 @@
       I'm having a problem using Kindlebox. Whom can I contact?
     </b>
     <p>
-    <a href="mailto:swang93@mit.edu">Send us an email</a>! If you
+    <a href="mailto:swang93@mit.edu">Send us an email</a> {% if logged_in %}with your user ID {{ user_id }}{% endif %}! If you
     think you've found a bug or would like to see a new feature, feel free to
     also <a href="https://github.com/stephanie-wang/kindlebox/issues">add an
     issue</a> on the Kindlebox GitHub page.
