@@ -1,44 +1,24 @@
 # -*- coding: utf-8 -*-
-import smtplib
-import os
+import os.path
 
-from email.MIMEMultipart import MIMEMultipart
-from email.MIMEBase import MIMEBase
-from email.MIMEText import MIMEText
-from email.Utils import COMMASPACE, formatdate
-from email import Encoders
+import sendgrid
 
 from app import app
 
 
-EMAILER_PASSWORD = app.config['EMAILER_PASSWORD']
+sg = sendgrid.SendGridClient(app.config['SENDGRID_USERNAME'], app.config['SENDGRID_PASSWORD'])
 
-def send_mail(send_from, send_to, subject, text, files=[], server='smtp.gmail.com'):
+def send_mail(send_from, send_to, files=[]):
     assert type(files)==list
 
-    msg = MIMEMultipart()
-    msg['From'] = send_from
-    msg['To'] = COMMASPACE.join(send_to)
-    msg['Date'] = formatdate(localtime=True)
-    msg['Subject'] = subject
-
-    msg.attach( MIMEText(text) )
+    message = sendgrid.Mail()
+    for to_email in send_to:
+        message.add_to(to_email)
+    message.set_subject('convert')
+    message.set_text('convert')
 
     for f in files:
-        part = MIMEBase('application', "octet-stream")
-        part.set_payload( open(f,"rb").read() )
-        Encoders.encode_base64(part)
-        part.add_header('Content-Disposition', 'attachment; filename="%s"' %
-            os.path.basename(f))
-        msg.attach(part)
+        message.add_attachment(os.path.basename(f), f)
 
-    if server == 'smtp.gmail.com':
-        smtpserver = smtplib.SMTP(server,587)
-        smtpserver.ehlo()
-        smtpserver.starttls()
-        smtpserver.login(send_from, EMAILER_PASSWORD)
-    else:
-        smtpserver = smtplib.SMTP(server)
-
-    smtpserver.sendmail(send_from, send_to, msg.as_string())
-    smtpserver.close()
+    message.set_from(send_from)
+    return sg.send(message)

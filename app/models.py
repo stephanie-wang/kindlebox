@@ -32,7 +32,7 @@ class User(db.Model):
 
     def set_new_emailer(self):
         random_base = get_random_string()
-        emailer_address = 'kindleboxed2+%s@gmail.com' % random_base
+        emailer_address = 'kindleboxer+%s@kindlebox.me' % random_base
         self.emailer = emailer_address
         return random_base
 

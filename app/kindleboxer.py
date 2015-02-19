@@ -154,7 +154,7 @@ def kindlebox(dropbox_id):
             if (attachment_size + added_book_sizes[book] > ATTACHMENTS_SIZE_LIMIT or
                 len(attached_books) == BOOK_ATTACHMENTS_LIMIT):
                 log.debug("Sending {0} books of size {1}".format(len(attached_books), attachment_size))
-                emailer.send_mail(email_from, email_to, 'convert', '', attached_books)
+                emailer.send_mail(email_from, email_to, attached_books)
                 attached_books = []
                 attachment_size = 0
 
@@ -168,7 +168,10 @@ def kindlebox(dropbox_id):
         # If there were any books added, send off the remainder of the batch.
         if len(attached_books) > 0:
             log.debug("Sending {0} books of size {1}".format(len(attached_books), attachment_size))
-            emailer.send_mail(email_from, email_to, 'convert', '', attached_books)
+            status, msg = emailer.send_mail(email_from, email_to, attached_books)
+            if status != 200:
+                raise Exception("Failed to email for dropbox id {id}, message: "
+                                "{message}".format(id=dropbox_id, message=msg))
 
         # Clean up the temporary files.
         if len(added_book_sizes) > 0:
