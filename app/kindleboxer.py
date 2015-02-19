@@ -183,10 +183,6 @@ def kindlebox(dropbox_id):
                 raise Exception("Failed to email for dropbox id {id}, message: "
                                 "{message}".format(id=dropbox_id, message=msg))
 
-        # Clean up the temporary files.
-        if len(added_book_sizes) > 0:
-            clear_tmp_directory()
-
         # Update the Dropbox delta cursor in database.
         user.cursor = delta['cursor']
 
@@ -220,6 +216,10 @@ def kindlebox(dropbox_id):
                    "{0}.").format(dropbox_id), exc_info=True)
     finally:
         lock.release()
+
+        # Clean up the temporary files.
+        if len(added_book_sizes) > 0:
+            clear_tmp_directory()
 
 
 def mimetypes_filter(path):
