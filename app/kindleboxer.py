@@ -17,8 +17,8 @@ from app.models import User, Book
 
 log = logging.getLogger()
 
-# Lock expires in 5 minutes.
-LOCK_EXPIRE = 60 * 5
+# Lock expires in 30 minutes, in case there are lots of epubs to convert.
+LOCK_EXPIRE = 60 * 30
 
 BASE_DIR = '/tmp/kindlebox'
 try:
