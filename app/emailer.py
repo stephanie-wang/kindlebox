@@ -18,7 +18,7 @@ def send_mail(send_from, send_to, files=[]):
     message.set_text('convert')
 
     for f in files:
-        message.add_attachment(os.path.basename(f), f)
+        message.add_attachment(os.path.basename(f), open(f, 'rb'))
 
     message.set_from(send_from)
     return sg.send(message)
