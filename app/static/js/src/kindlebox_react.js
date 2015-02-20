@@ -247,16 +247,27 @@ var ActiveMessage = React.createClass({
     return (
         <div>
           <h2>Success! Read the PDF below for final instructions.</h2>
+          <p className="tip">
+            Kindlebox is free for everyone, but it costs us to keep it that
+            way. <a ref="donateLink">Help us keep Kindlebox
+            going</a>!
+          </p>
           <iframe id="pdf-reader" src="static/kindlebox_welcome.pdf#view=fit"></iframe>
-          <div className="tip">
+          <p className="tip">
             If you'd like to update your Kindle devices, or stop using
-            Kindlebox completely, <a onClick={this.deactivateHandler}
-            className="button">click here</a>.
-          </div>
+            Kindlebox completely, <a onClick={this.deactivateHandler}>click
+            here</a>.
+          </p>
         </div>
       );
   },
   deactivateHandler: function() {
     this.props.deactivateHandler();
+  },
+  componentDidMount: function() {
+    $donateLink = $(this.refs.donateLink.getDOMNode());
+    $donateLink.click(function() {
+      $('#donations-modal').modal();
+    });
   },
 });
