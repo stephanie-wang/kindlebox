@@ -26,9 +26,10 @@ try:
 except OSError:
     pass
 
-# And can only email 25 books at a time. Sendgrid only allows 25MB total.
+# And can only email 25 books at a time. Sendgrid only allows 20MB at a time,
+# after encoding to email text, so more like 15.
 BOOK_ATTACHMENTS_LIMIT = 25
-ATTACHMENTS_SIZE_LIMIT = 20 * (10**6)
+ATTACHMENTS_SIZE_LIMIT = 15 * (10**6)
 
 # Supported filetypes.
 # According to:
@@ -105,7 +106,7 @@ def kindlebox(dropbox_id):
     # If unable to acquire lock, wait a bit and then add to the queue again.
     if not lock.acquire(blocking=False):
         log.debug("Couldn't acquire lock {0}.".format(lock_id))
-        time.sleep(5)
+        time.sleep(1)
         kindlebox.delay(dropbox_id)
         return False
 
