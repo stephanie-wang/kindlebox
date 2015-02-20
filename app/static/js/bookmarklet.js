@@ -60,7 +60,7 @@ function whitelistEmailer(emailer, successCallback) {
   }, function(res) {
     try {
       if (res.WhitelistEmail.success || res.WhitelistEmail.error == 'DUPLICATE_ITEM') {
-          analytics.track('Whitelisted emailer');
+          //analytics.track('Whitelisted emailer');
           whitelistedEmailer = true;
           successCallback();
       } else {
@@ -117,15 +117,11 @@ function addModal(kindleboxCsrfToken, appUrl, emailer) {
     var kindleNames = devices.map(function(device) {
       return device.name;
     });
-    analytics.track('Submitted activation form', {
-      kindleNames: kindleNames,
-      numDevices: kindleNames.length
-    });
     $("[name='kindle_names']").val(JSON.stringify(kindleNames));
     $("#" + KINDLEBOX_FORM_ID).submit();
   }
   $modalHtml.find("#activate-kindlebox-btn").click(function() {
-    analytics.track('Clicked activate button');
+    //analytics.track('Clicked activate button');
     whitelistEmailer(emailer, activateKindlebox);
   });
 
@@ -156,7 +152,6 @@ function addModal(kindleboxCsrfToken, appUrl, emailer) {
 
 function showModal() {
   $('#' + KINDLEBOX_MODAL_ID).modal();
-  analytics.track('Showed device picker modal');
 }
 
 function submitKindleName(kindleName) {
@@ -173,5 +168,4 @@ function submitKindleName(kindleName) {
 
   !function(){var analytics=window.analytics=window.analytics||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{analytics.invoked=!0;analytics.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","group","track","ready","alias","page","once","off","on"];analytics.factory=function(t){return function(){var e=Array.prototype.slice.call(arguments);e.unshift(t);analytics.push(e);return analytics}};for(var t=0;t<analytics.methods.length;t++){var e=analytics.methods[t];analytics[e]=analytics.factory(e)}analytics.load=function(t){var e=document.createElement("script");e.type="text/javascript";e.async=!0;e.src=("https:"===document.location.protocol?"https://":"http://")+"cdn.segment.com/analytics.js/v1/"+t+"/analytics.min.js";var n=document.getElementsByTagName("script")[0];n.parentNode.insertBefore(e,n)};analytics.SNIPPET_VERSION="3.0.1";
       analytics.load("lWJxozKgnYCAvQtWNks8rrWfoLjeNEJn");
-      analytics.track("Loaded bookmarklet");
             }}();

@@ -73,7 +73,7 @@ var InstructionTable = React.createClass({
     this.setState({
       "addedBookmarklet": true,
     });
-    analytics.track('Added bookmarklet');
+    //analytics.track('Added bookmarklet');
   },
   deactivateHandler: function() {
     $.post('/deactivate', function(res) {
