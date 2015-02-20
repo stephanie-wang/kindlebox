@@ -97,86 +97,103 @@ def upload_welcome_pdf(dropbox_id):
     return True
 
 
+def _kindlebox(dropbox_id, user, client):
+    delta = client.delta(user.cursor)
+
+    added_book_sizes = dict(get_added_book_sizes(delta['entries'], client))
+    removed_books = get_removed_books(delta['entries'])
+    log.debug("Delta contains {0} added books, {1} removed "
+              "books".format(len(added_book_sizes), len(removed_books)))
+
+    if len(added_book_sizes) == 0 and len(removed_books) == 0:
+        return True
+
+    # Download the changed files and get the hashes.
+    # Also record the hashes/paths of any newly added books.
+    new_books, duplicate_books = get_new_and_duplicates(client,
+                                                        added_book_sizes,
+                                                        user.id)
+
+    # Email ze books.
+    # Add all books that were supposed to be emailed. If email was
+    # unsuccessful, mark book as unsent.
+    email_from = user.emailer
+    email_to = [row.kindle_name + '@kindle.com' for row in user.kindle_names.all()]
+    attachments = {}
+    attachment_size = 0
+    for book_hash, book_path in new_books.iteritems():
+        if (attachment_size + added_book_sizes[book_path] >
+                ATTACHMENTS_SIZE_LIMIT or len(attachments) ==
+                BOOK_ATTACHMENTS_LIMIT):
+            _email_attachments(email_from, email_to, attachments, user.id)
+            attachments = {}
+            attachment_size = 0
+
+        attachments[book_hash] = book_path
+        attachment_size += added_book_sizes[book_path]
+
+    if len(attachments) > 0:
+        _email_attachments(email_from, email_to, attachments, user.id)
+
+    # Commit all new books that should've been emailed.
+    db.session.commit()
+
+    # Add duplicates and remove the deleted books from the database.
+    # books from and add the duplicates to the database.
+    add_duplicate_books(user.id, duplicate_books)
+    remove_books(user.id, removed_books)
+
+    # Update the Dropbox delta cursor in database.
+    user.cursor = delta['cursor']
+
+    db.session.commit()
+
+    # Clean up the temporary files.
+    if len(added_book_sizes) > 0:
+        clear_tmp_directory()
+
+    return False
+
+
 @celery.task(ignore_result=True)
 def kindlebox(dropbox_id):
     # Lock per user.
     lock_id = '{0}-lock-{1}'.format(kindlebox.__name__, dropbox_id)
     lock = redis.lock(lock_id, timeout=LOCK_EXPIRE)
 
-    # If unable to acquire lock, wait a bit and then add to the queue again.
+    # If unable to acquire lock, discard the task and hope that another worker
+    # finishes (see note below).
     if not lock.acquire(blocking=False):
         log.debug("Couldn't acquire lock {0}.".format(lock_id))
-        time.sleep(1)
-        kindlebox.delay(dropbox_id)
         return False
 
     log.debug("Lock {0} acquired.".format(lock_id))
 
-    try:
-        # Only process Dropbox changes for active users.
-        user = User.query.filter_by(dropbox_id=dropbox_id, active=True).first()
-        if user is None:
-            return False
-
-        client = DropboxClient(user.access_token)
-        delta = client.delta(user.cursor)
-
-        added_book_sizes = dict(get_added_book_sizes(delta['entries'], client))
-        removed_books = get_removed_books(delta['entries'])
-        log.debug("Delta contains {0} added books, {1} removed "
-                  "books".format(len(added_book_sizes), len(removed_books)))
-
-        # Download the changed files and get the hashes.
-        # Also record the hashes/paths of any newly added books.
-        new_books, duplicate_books = get_new_and_duplicates(client,
-                                                            added_book_sizes,
-                                                            user.id)
-
-        # Email ze books.
-        # Add all books that were supposed to be emailed. If email was
-        # unsuccessful, mark book as unsent.
-        email_from = user.emailer
-        email_to = [row.kindle_name + '@kindle.com' for row in user.kindle_names.all()]
-        attachments = {}
-        attachment_size = 0
-        for book_hash, book_path in new_books.iteritems():
-            if (attachment_size + added_book_sizes[book_path] >
-                    ATTACHMENTS_SIZE_LIMIT or len(attachments) ==
-                    BOOK_ATTACHMENTS_LIMIT):
-                _email_attachments(email_from, email_to, attachments, user.id)
-                attachments = {}
-                attachment_size = 0
-
-            attachments[book_hash] = book_path
-            attachment_size += added_book_sizes[book_path]
-
-        if len(attachments) > 0:
-            _email_attachments(email_from, email_to, attachments, user.id)
-
-        # Commit all new books that should've been emailed.
-        db.session.commit()
-
-        # Add duplicates and remove the deleted books from the database.
-        # books from and add the duplicates to the database.
-        add_duplicate_books(user.id, duplicate_books)
-        remove_books(user.id, removed_books)
-
-        # Update the Dropbox delta cursor in database.
-        user.cursor = delta['cursor']
-
-        db.session.commit()
-
-        return True
-
-    except:
-        log.error(("Failed to process dropbox webhook for dropbox id "
-                   "{0}.").format(dropbox_id), exc_info=True)
-    finally:
+    # Only process Dropbox changes for active users.
+    user = User.query.filter_by(dropbox_id=dropbox_id, active=True).first()
+    if user is None:
         lock.release()
+        return
 
-        # Clean up the temporary files.
-        if len(added_book_sizes) > 0:
-            clear_tmp_directory()
+    log.info("Processing dropbox webhook for dropbox id {0}".format(dropbox_id))
+    # Loop until there is no delta.
+    # NOTE: There is a slight chance of a race condition between dropbox
+    # webhook and two celery workers that would result in a delta getting
+    # dropped, but hopefully this is better than cluttering the task queues.
+    client = DropboxClient(user.access_token)
+    while True:
+        log.debug("Processing one kindlebox iteration for dropbox id "
+                  "{0}".format(dropbox_id))
+        try:
+            done = _kindlebox(dropbox_id, user, client)
+            if done:
+                break
+        except:
+            log.error(("Failed to process dropbox webhook for dropbox id "
+                       "{0}.").format(dropbox_id), exc_info=True)
+            break
+
+    lock.release()
 
 
 def mimetypes_filter(path):
