@@ -145,41 +145,13 @@ def kindlebox(dropbox_id):
         # Email ze books.
         email_from = user.emailer
         email_to = [row.kindle_name + '@kindle.com' for row in user.kindle_names.all()]
-        attached_books = []
-        attachment_size = 0
         for book in new_books:
-            # If the next book will put us over the limit, or if we've reached
-            # 25 files currently, send off a batch email of books.
-            if (attachment_size + added_book_sizes[book] > ATTACHMENTS_SIZE_LIMIT or
-                len(attached_books) == BOOK_ATTACHMENTS_LIMIT):
-                log.debug("Sending {0} books of size {1} from {2} to {3}"
-                          .format(len(attached_books),
-                                  attachment_size,
-                                  email_from,
-                                  ' '.join(email_to)))
-                status, msg = emailer.send_mail(email_from, email_to, attached_books)
-                if status != 200:
-                    raise Exception("Failed to email for dropbox id {id}, message: "
-                                    "{message}".format(id=dropbox_id, message=msg))
-                attached_books = []
-                attachment_size = 0
-
             tmp_path = get_tmp_path(book)
             mobi_tmp_path = epub_to_mobi_path(tmp_path)
             if mobi_tmp_path is not None:
                 tmp_path = mobi_tmp_path
-            log.debug("Attaching book with path {0}".format(tmp_path))
-            attached_books.append(tmp_path)
-            attachment_size += added_book_sizes[book]
 
-        # If there were any books added, send off the remainder of the batch.
-        if len(attached_books) > 0:
-            log.debug("Sending {0} books of size {1} from {2} to {3}"
-                      .format(len(attached_books),
-                              attachment_size,
-                              email_from,
-                              ' '.join(email_to)))
-            status, msg = emailer.send_mail(email_from, email_to, attached_books)
+            status, msg = emailer.send_mail(email_from, email_to, [tmp_path])
             if status != 200:
                 raise Exception("Failed to email for dropbox id {id}, message: "
                                 "{message}".format(id=dropbox_id, message=msg))
@@ -203,12 +175,6 @@ def kindlebox(dropbox_id):
                 db.session.delete(book)
                 num_books_deleted += 1
         db.session.commit()
-
-        analytics.track(str(user.id), 'Kindleboxed', {
-            'num_bytes_emailed': sum(added_book_sizes[book] for book in new_books),
-            'num_books_emailed': len(new_books),
-            'num_books_deleted': num_books_deleted,
-            })
 
         return True
 
