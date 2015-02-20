@@ -82,7 +82,7 @@ def upload_welcome_pdf(dropbox_id):
         with open('app/static/kindlebox_welcome.pdf', 'rb') as f:
             response = client.put_file('Welcome to Kindlebox.pdf', f)
             if response:
-                log.info("Welcome PDF sent to Dropbox ID {0}.".format(dropbox_id))
+                log.info("Welcome PDF sent to user ID {0}.".format(user.id))
             else:
                 raise Exception("No response received after sending welcome PDF")
 
@@ -90,8 +90,8 @@ def upload_welcome_pdf(dropbox_id):
         db.session.commit()
 
     except:
-        log.error(("Welcome PDF failed for Dropbox ID "
-                   "{0}.").format(dropbox_id), exc_info=True)
+        log.error(("Welcome PDF failed for user ID "
+                   "{0}.").format(user.id), exc_info=True)
         return False
 
     return True
@@ -125,7 +125,7 @@ def _kindlebox(dropbox_id, user, client):
         if (attachment_size + added_book_sizes[book_path] >
                 ATTACHMENTS_SIZE_LIMIT or len(attachments) ==
                 BOOK_ATTACHMENTS_LIMIT):
-            _email_attachments(email_from, email_to, attachments, user.id)
+            email_attachments(email_from, email_to, attachments, user.id)
             attachments = {}
             attachment_size = 0
 
@@ -133,7 +133,7 @@ def _kindlebox(dropbox_id, user, client):
         attachment_size += added_book_sizes[book_path]
 
     if len(attachments) > 0:
-        _email_attachments(email_from, email_to, attachments, user.id)
+        email_attachments(email_from, email_to, attachments, user.id)
 
     # Commit all new books that should've been emailed.
     db.session.commit()
@@ -175,7 +175,7 @@ def kindlebox(dropbox_id):
         lock.release()
         return
 
-    log.info("Processing dropbox webhook for dropbox id {0}".format(dropbox_id))
+    log.info("Processing dropbox webhook for user id {0}".format(user.id))
     # Loop until there is no delta.
     # NOTE: There is a slight chance of a race condition between dropbox
     # webhook and two celery workers that would result in a delta getting
@@ -189,8 +189,8 @@ def kindlebox(dropbox_id):
             if done:
                 break
         except:
-            log.error(("Failed to process dropbox webhook for dropbox id "
-                       "{0}.").format(dropbox_id), exc_info=True)
+            log.error(("Failed to process dropbox webhook for user id "
+                       "{0}.").format(user.id), exc_info=True)
             break
 
     lock.release()
@@ -288,24 +288,35 @@ def add_duplicate_books(user_id, duplicate_books):
         _add_book(user_id, book_path, book_hash, duplicate.unsent)
 
 
-def _email_attachments(email_from, email_to, attachments, user_id):
+def email_attachments(email_from, email_to, attachments, user_id):
     attachment_paths = get_attachment_paths(attachments.values())
     log.debug("Sending email to " + ' '.join(email_to) + " " + ' '.join(attachment_paths))
+
     try:
-        status, message = emailer.send_mail(email_from, email_to,
-                                            attachment_paths)
-        if status != 200:
-            log.error("Failed to email books {books} for user id {id}, "
-                      "message: {message}".format(books=' '.join(attachment_paths),
-                                                  id=user_id,
-                                                  message=message))
+        # First try to batch email.
+        _email_attachments(email_from, email_to, attachment_paths)
         for book_hash, book_path in attachments.iteritems():
-            _add_book(user_id, book_path, book_hash, status != 200)
-    except:
-        log.error("Failed to email books {books} for user id "
-                  "{id}".format(books=' '.join(attachment_paths),
-                                id=user_id),
-                                exc_info=True)
+            _add_book(user_id, book_path, book_hash, False)
+    except KindleboxException:
+        log.error("Failed to send books for user id {0}".format(user_id),
+                  exc_info=True)
+
+        # If fail to batch email, try sending individually instead.
+        for book_hash, book_path in attachments.iteritems():
+            try:
+                _email_attachments(email_from, email_to, get_attachment_paths([book_path]))
+                _add_book(user_id, book_path, book_hash, False)
+            except KindleboxException:
+                log.error("Failed to resend book for user id {0}".format(user_id),
+                          exc_info=True)
+                _add_book(user_id, book_path, book_hash, True)
+
+
+def _email_attachments(email_from, email_to, attachment_paths):
+    status, message = emailer.send_mail(email_from, email_to,
+                                        attachment_paths)
+    if status != 200:
+        raise KindleboxException(message)
 
 
 def epub_to_mobi_path(epub_path):
@@ -354,3 +365,7 @@ def get_attachment_paths(book_paths):
 
 def canonicalize(pathname):
     return pathname.lower()
+
+
+class KindleboxException(Exception):
+    pass
