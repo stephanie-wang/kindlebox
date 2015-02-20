@@ -46,6 +46,80 @@
       </div>
     </div>
 
+    <div id="show-donations">
+      <a class="button">
+        <div id="donations-button" class="action action-blue">
+          <div class="action-content">
+            <div class="action-content-inner">
+              $1
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="modal fade" id="donations-modal" tabindex="-1" role="dialog" aria-labelledby="donations-modal" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h2>Support Kindlebox</h2>
+          </div>
+          <div class="modal-body">
+            Kindlebox needs your help to pay the bills. Every little bit helps
+            keep Kindlebox a free service for everyone!
+            <form id="donations-form" action="/donate" method="POST">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+              <input type="hidden" name="amount" value=""/>
+              <div class="form-row">
+                <span class="form-row-key">Donation Amount: </span>
+                <div class="form-row-input btn-group" role="group">
+                  <button type="button" class="btn btn-default amount-btn active" amount="1">$1</button>
+                  <button type="button" class="btn btn-default amount-btn" amount="5">$5</button>
+                  <button type="button" class="btn btn-default amount-btn" amount="20">$20</button>
+                  <button type="button" class="btn btn-default amount-btn">$<input id="other-amount" type="text" size="4" /></button>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <label class="form-row-label">
+                  <span class="form-row-key">Email: </span>
+                  <input type="text" name="emailAddress" size="20" class="form-row-input form-input-formatting"/>
+                </label>
+              </div>
+
+              <div class="form-row">
+                <label class="form-row-label">
+                  <span class="form-row-key">Card Number: </span>
+                  <input type="text" size="20" data-stripe="number" class="form-row-input form-input-formatting"/>
+                </label>
+              </div>
+
+              <div class="form-row">
+                <label class="form-row-label">
+                  <span class="form-row-key">CVC: </span>
+                  <input type="text" size="4" data-stripe="cvc" class="form-input-formatting"/>
+                </label>
+              </div>
+
+              <div class="form-row">
+                <label class="form-row-label">
+                  <span class="form-row-key">Expiration (MM/YYYY): </span>
+                  <span class="form-row-input">
+                    <input type="text" size="2" data-stripe="exp-month" class="form-input-formatting"/>
+                    <span> / </span>
+                    <input type="text" size="4" data-stripe="exp-year" class="form-input-formatting"/>
+                  </span>
+                </label>
+              </div>
+              <span class="payment-errors"></span>
+              <button id="submit-donation" type="submit" class="btn btn-primary pull-right">Submit Donation</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="content" class="container col-md-offset-3 col-md-6">
         {% block body %}{% endblock %}
     </div>
@@ -60,6 +134,14 @@
     {% if dev %}
     <script type="text/javascript" src="static/js/lib/JSXTransformer.js"></script>
     {% endif %}
+    <script type="text/javascript" src="https://js.stripe.com/v2/"></script>
+    <script type="text/javascript" src="//s7.addthis.com/js/300/addthis_widget.js#pubid=ra-54b4b1983eda50f6" async="async"></script>
+
+    <script type="text/javascript">
+      var STRIPE_PUBLIC_KEY = "{{ STRIPE_PUBLIC_KEY }}";
+    </script>
+    <script type="text/javascript" src="static/js/stripe.js"></script>
+
     <script type="text/javascript">
   !function(){var analytics=window.analytics=window.analytics||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{analytics.invoked=!0;analytics.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","group","track","ready","alias","page","once","off","on"];analytics.factory=function(t){return function(){var e=Array.prototype.slice.call(arguments);e.unshift(t);analytics.push(e);return analytics}};for(var t=0;t<analytics.methods.length;t++){var e=analytics.methods[t];analytics[e]=analytics.factory(e)}analytics.load=function(t){var e=document.createElement("script");e.type="text/javascript";e.async=!0;e.src=("https:"===document.location.protocol?"https://":"http://")+"cdn.segment.com/analytics.js/v1/"+t+"/analytics.min.js";var n=document.getElementsByTagName("script")[0];n.parentNode.insertBefore(e,n)};analytics.SNIPPET_VERSION="3.0.1";
       analytics.load("2afEcXvTS827n9aLqcisLOjJH1XF83uB");
@@ -70,9 +152,6 @@
         });
         {% endif %}
             }}();
-    </script>
-    <script type="text/javascript" src="//s7.addthis.com/js/300/addthis_widget.js#pubid=ra-54b4b1983eda50f6" async="async"></script>
-    <script type="text/javascript">
       var addthis_share = addthis_share || {}
       addthis_share = {
         passthrough : {

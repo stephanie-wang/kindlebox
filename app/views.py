@@ -14,6 +14,7 @@ from flask import abort
 from flask import render_template
 from flask import flash
 from flask import jsonify
+import stripe
 from validate_email import validate_email
 
 from app import analytics
@@ -33,6 +34,8 @@ DEBUG = app.config.get('DEBUG', False)
 
 DROPBOX_APP_KEY = app.config.get('DROPBOX_APP_KEY', '')
 DROPBOX_APP_SECRET = app.config.get('DROPBOX_APP_SECRET', '')
+
+stripe.api_key = app.config.get('STRIPE_API_KEY', '')
 
 
 @app.errorhandler(404)
@@ -265,6 +268,54 @@ def verify():
     return ''
 
 
+@app.route('/donate', methods=['POST'])
+def donate():
+    """
+    Handle donation request with Stripe. POST request must include stripe
+    token, an amont, and optionally an email address.
+    """
+    token = request.form.get('stripeToken')
+    if not token:
+        return jsonify({
+            'success': False,
+            'message': "Need Stripe token",
+            })
+
+    amount = request.form.get('amount')
+    try:
+        amount = int(100 * float(amount))
+    except:
+        return jsonify({
+            'success': False,
+            'message': "Invalid donation amount.",
+            })
+
+    email_address = request.form.get('emailAddress')
+
+    try:
+        charge = stripe.Charge.create(
+            amount=amount,
+            currency="usd",
+            source=token,
+            description=email_address,
+            receipt_email=email_address,
+        )
+        return jsonify({
+            'success': True,
+            'message': "",
+            })
+    except stripe.CardError, e:
+        return jsonify({
+            'success': False,
+            'message': "Your card has been declined.",
+            })
+
+    return jsonify({
+        'success': False,
+        'message': 'Something wonky happened.',
+        })
+
+
 def get_auth_flow():
     if DEBUG:
         redirect_uri = url_for('dropbox_auth_finish', _external=True)
@@ -299,5 +350,6 @@ def get_logged_in_info():
 
 def render_kindlebox_template(template, **args):
     args['dev'] = app.config.get('DEV', False)
+    args['STRIPE_PUBLIC_KEY'] = app.config.get('STRIPE_PUBLIC_KEY', '')
     args.update(get_logged_in_info())
     return render_template(template, **args)

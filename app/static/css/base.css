@@ -111,14 +111,93 @@ body {
     opacity: 0.4;
 }
 
-.start-stop {
+.action-blue {
   float: left;
-  width: 50%;
-  margin: 30px 25%;
   color: white;
   background-color: #428bca;
 }
 
-.start-stop:hover, .start-stop:focus {
+.action-blue:hover, .action-blue:focus {
   background-color: #3A7EB9;
+}
+
+.start-stop {
+  width: 50%;
+  margin: 30px 25%;
+}
+
+#donations-button {
+  padding: 10px;
+  margin-left: -60px;
+  font-size: 30px;
+}
+
+#show-donations {
+  position: fixed;
+  margin-top: 10px;
+  margin-left: 20px;
+}
+
+.modal-content {
+  float: left;
+}
+
+.modal-body {
+  float: left;
+  padding: 15px;
+}
+
+#donations-form {
+  padding: 5px;
+  margin-top: 15px;
+  float: left;
+  width: 100%;
+}
+
+.form-row {
+  margin: 10px;
+  width: 90%;
+  float: left;
+}
+.form-row-label {
+  width: 100%;
+}
+
+.form-row-key {
+  font-weight: bold;
+  float: left;
+  width: 40%;
+}
+
+.form-row-input {
+  float: left;
+  width: 60%;
+}
+
+.form-input-formatting {
+  font-weight: normal;
+  padding-left: 3px;
+}
+
+#submit-donation {
+  font-size: 16px;
+  margin-right: 20px;
+}
+
+.payment-errors {
+  color: #F28C00;
+  float: left;
+  width: 60%;
+}
+
+.btn {
+  font-size: 18px;
+}
+
+#other-amount {
+  padding-left: 3px;
+  font-size: 18px;
+  height: 24px;
+  line-height: 24px;
+  margin-top: -2px;
 }
