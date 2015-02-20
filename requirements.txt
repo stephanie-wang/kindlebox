@@ -25,6 +25,7 @@ psycopg2==2.5.3
 pytz==2014.7
 redis==2.10.1
 simplejson==3.6.0
+stripe==1.21.0
 urllib3==1.8.2
 wsgiref==0.1.2
 analytics-python==1.0.3
