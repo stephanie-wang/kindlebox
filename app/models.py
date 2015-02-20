@@ -48,12 +48,14 @@ class Book(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     book_hash = db.Column(db.Text)
     pathname = db.Column(db.Text)
+    unsent = db.Column(db.Boolean)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
-    def __init__(self, user_id, pathname, book_hash):
+    def __init__(self, user_id, pathname, book_hash, unsent=False):
         self.user_id = user_id
         self.pathname = pathname
         self.book_hash = book_hash
+        self.unsent = unsent
 
 
 class KindleName(db.Model):

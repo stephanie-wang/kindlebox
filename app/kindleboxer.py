@@ -127,53 +127,43 @@ def kindlebox(dropbox_id):
                   "books".format(len(added_book_sizes), len(removed_books)))
 
         # Download the changed files and get the hashes.
-        # Also record the paths of any newly added books.
-        hashes = []
-        new_books = []
-        new_hashes = set()
-        for book_path, book_byte_size in added_book_sizes.iteritems():
-            book_hash = download_book(client, book_path)
-            hashes.append((book_path, book_hash))
-
-            # Make sure that the book is not a duplicate of either a previously
-            # added book or a book added on this round.
-            if (user.books.filter_by(book_hash=book_hash).count() == 0 and
-                    book_hash not in new_hashes):
-                new_hashes.add(book_hash)
-                new_books.append(book_path)
+        # Also record the hashes/paths of any newly added books.
+        new_books, duplicate_books = get_new_and_duplicates(client,
+                                                            added_book_sizes,
+                                                            user.id)
 
         # Email ze books.
+        # Add all books that were supposed to be emailed. If email was
+        # unsuccessful, mark book as unsent.
         email_from = user.emailer
         email_to = [row.kindle_name + '@kindle.com' for row in user.kindle_names.all()]
-        for book in new_books:
-            tmp_path = get_tmp_path(book)
-            mobi_tmp_path = epub_to_mobi_path(tmp_path)
-            if mobi_tmp_path is not None:
-                tmp_path = mobi_tmp_path
+        attachments = {}
+        attachment_size = 0
+        for book_hash, book_path in new_books.iteritems():
+            if (attachment_size + added_book_sizes[book_path] >
+                    ATTACHMENTS_SIZE_LIMIT or len(attachments) ==
+                    BOOK_ATTACHMENTS_LIMIT):
+                _email_attachments(email_from, email_to, attachments, user.id)
+                attachments = {}
+                attachment_size = 0
 
-            status, msg = emailer.send_mail(email_from, email_to, [tmp_path])
-            if status != 200:
-                raise Exception("Failed to email for dropbox id {id}, message: "
-                                "{message}".format(id=dropbox_id, message=msg))
+            attachments[book_hash] = book_path
+            attachment_size += added_book_sizes[book_path]
+
+        if len(attachments) > 0:
+            _email_attachments(email_from, email_to, attachments, user.id)
+
+        # Commit all new books that should've been emailed.
+        db.session.commit()
+
+        # Add duplicates and remove the deleted books from the database.
+        # books from and add the duplicates to the database.
+        add_duplicate_books(user.id, duplicate_books)
+        remove_books(user.id, removed_books)
 
         # Update the Dropbox delta cursor in database.
         user.cursor = delta['cursor']
 
-        # Save all books, added/updated and removed, to the database.
-        for book_path, book_hash in hashes:
-            book = user.books.filter_by(pathname=book_path).first()
-            if book is None:
-                book = Book(user.id, book_path, book_hash)
-                db.session.add(book)
-            else:
-                book.book_hash = book_hash
-
-        num_books_deleted = 0
-        for book_path in removed_books:
-            book = user.books.filter_by(pathname=book_path).first()
-            if book is not None:
-                db.session.delete(book)
-                num_books_deleted += 1
         db.session.commit()
 
         return True
@@ -214,6 +204,24 @@ def get_removed_books(delta_entries):
     return [entry for entry in removed_entries if mimetypes_filter(entry)]
 
 
+def get_new_and_duplicates(client, added_book_sizes, user_id):
+    duplicate_books = {}
+    new_books = {}
+    for book_path, book_byte_size in added_book_sizes.iteritems():
+        book_hash = download_book(client, book_path)
+
+        # Make sure that the book is not a duplicate of either a previously
+        # added book or a book added on this round.
+        if (Book.query.filter_by(user_id=user_id)
+                .filter_by(book_hash=book_hash).count() == 0 and
+                book_hash not in new_books):
+            new_books[book_hash] = book_path
+        else:
+            duplicate_books[book_hash] = book_path
+
+    return new_books, duplicate_books
+
+
 def download_book(client, book_path):
     # Make all the necessary nested directories in the temporary directory.
     tmp_path = get_tmp_path(book_path)
@@ -239,6 +247,48 @@ def download_book(client, book_path):
     book_hash = md5.hexdigest()
 
     return book_hash
+
+
+def remove_books(user_id, removed_books):
+    for book_path in removed_books:
+        book = Book.query.filter_by(user_id=user_id).filter_by(pathname=book_path).first()
+        if book is not None:
+            db.session.delete(book)
+
+
+def _add_book(user_id, book_path, book_hash, unsent):
+    book = Book(user_id, book_path, book_hash, unsent=unsent)
+    db.session.add(book)
+
+
+def add_duplicate_books(user_id, duplicate_books):
+    for book_hash, book_path in duplicate_books.iteritems():
+        duplicate = (Book.query.filter_by(user_id=user_id)
+                         .filter_by(book_hash=book_hash).first())
+        # There should always be a duplicate?
+        if duplicate is None:
+            continue
+        _add_book(user_id, book_path, book_hash, duplicate.unsent)
+
+
+def _email_attachments(email_from, email_to, attachments, user_id):
+    attachment_paths = get_attachment_paths(attachments.values())
+    log.debug("Sending email to " + ' '.join(email_to) + " " + ' '.join(attachment_paths))
+    try:
+        status, message = emailer.send_mail(email_from, email_to,
+                                            attachment_paths)
+        if status != 200:
+            log.error("Failed to email books {books} for user id {id}, "
+                      "message: {message}".format(books=' '.join(attachment_paths),
+                                                  id=user_id,
+                                                  message=msg))
+        for book_hash, book_path in attachments.iteritems():
+            _add_book(user_id, book_path, book_hash, status != 200)
+    except:
+        log.error("Failed to email books {books} for user id "
+                  "{id}".format(books=' '.join(attachment_paths),
+                                id=user_id),
+                                exc_info=True)
 
 
 def epub_to_mobi_path(epub_path):
@@ -272,6 +322,17 @@ def clear_tmp_directory():
 
 def get_tmp_path(book_path):
     return os.path.join(BASE_DIR, str(os.getpid()), book_path.strip('/'))
+
+
+def get_attachment_paths(book_paths):
+    attachment_paths = []
+    for book_path in book_paths:
+        tmp_path = get_tmp_path(book_path)
+        mobi_tmp_path = epub_to_mobi_path(tmp_path)
+        if mobi_tmp_path is not None:
+            tmp_path = mobi_tmp_path
+        attachment_paths.append(tmp_path)
+    return attachment_paths
 
 
 def canonicalize(pathname):
