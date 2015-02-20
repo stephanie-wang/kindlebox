@@ -298,7 +298,7 @@ def _email_attachments(email_from, email_to, attachments, user_id):
             log.error("Failed to email books {books} for user id {id}, "
                       "message: {message}".format(books=' '.join(attachment_paths),
                                                   id=user_id,
-                                                  message=msg))
+                                                  message=message))
         for book_hash, book_path in attachments.iteritems():
             _add_book(user_id, book_path, book_hash, status != 200)
     except:
