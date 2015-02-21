@@ -1,24 +1,35 @@
 # -*- coding: utf-8 -*-
 import os.path
+import codecs
 
-import sendgrid
+import requests
 
 from app import app
 
 
-sg = sendgrid.SendGridClient(app.config['SENDGRID_USERNAME'], app.config['SENDGRID_PASSWORD'])
+SENDGRID_API_URL = 'https://api.sendgrid.com/api/mail.send.json'
 
-def send_mail(send_from, send_to, files=[]):
+def send_mail(send_from, send_to, files=None):
+    if files is None:
+        files = []
     assert type(files)==list
 
-    message = sendgrid.Mail()
-    for to_email in send_to:
-        message.add_to(to_email)
-    message.set_subject('convert')
-    message.set_text('convert')
+    data = {
+             'api_user': app.config['SENDGRID_USERNAME'],
+             'api_key': app.config['SENDGRID_PASSWORD'],
+             'from': send_from,
+             'to[]': send_to,
+             'subject': 'convert',
+             'text': 'convert',
+             }
 
-    for f in files:
-        message.add_attachment(os.path.basename(f), open(f, 'rb'))
+    post_files = {}
 
-    message.set_from(send_from)
-    return sg.send(message)
+    for _file in files:
+        filename = os.path.basename(_file)#.decode('utf-8', 'ignore').encode('ascii', 'ignore'))
+        _file_key = 'files[{filename}]'.format(filename=filename).decode('utf-8').encode('ascii', 'ignore')
+        post_files[_file_key] = open(_file.decode('utf-8'), 'rb')
+
+    response = requests.post(SENDGRID_API_URL, data=data, files=post_files)
+
+    return response.status_code, response.text
