@@ -28,9 +28,10 @@ except OSError:
     pass
 
 # And can only email 25 books at a time. Sendgrid only allows 20MB at a time,
-# after encoding to email text, so more like 15.
+# after encoding to email text, so more like 15. Mailgun is about 25MB?  And
+# can only email 25 books at a time.
 ATTACHMENTS_LIMIT = 25
-ATTACHMENTS_SIZE_LIMIT = 20 * (10**6)
+ATTACHMENTS_SIZE_LIMIT = 25 * (10**6)
 AMAZON_SIZE_LIMIT = 50 * (10**6)
 
 # Supported filetypes.
