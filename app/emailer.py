@@ -26,9 +26,10 @@ def send_mail(send_from, send_to, files=None):
     post_files = {}
 
     for _file in files:
-        filename = os.path.basename(_file)#.decode('utf-8', 'ignore').encode('ascii', 'ignore'))
-        _file_key = 'files[{filename}]'.format(filename=filename).decode('utf-8').encode('ascii', 'ignore')
-        post_files[_file_key] = open(_file.decode('utf-8'), 'rb')
+        # `_file` is unicode, so encode to ASCII.
+        filename = os.path.basename(_file).encode('ascii', 'ignore')
+        _file_key = 'files[{filename}]'.format(filename=filename)
+        post_files[_file_key] = open(_file, 'rb')
 
     response = requests.post(SENDGRID_API_URL, data=data, files=post_files)
 
