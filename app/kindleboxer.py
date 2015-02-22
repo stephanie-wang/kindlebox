@@ -346,7 +346,7 @@ def email_attachments(email_from, email_to, attachments, user_id):
         _email_attachments(email_from, email_to, attachment_paths)
         for book in attachments:
             add_book(user_id, book, False)
-    except KindleboxException:
+    except Exception:
         log.error("Failed to send books for user id {0}".format(user_id),
                   exc_info=True)
 
@@ -355,7 +355,7 @@ def email_attachments(email_from, email_to, attachments, user_id):
             try:
                 _email_attachments(email_from, email_to, get_attachment_paths([book.pathname]))
                 add_book(user_id, book, False)
-            except KindleboxException:
+            except Exception:
                 log.error("Failed to resend book for user id {0}".format(user_id),
                           exc_info=True)
                 add_book(user_id, book, True)
@@ -417,7 +417,7 @@ def canonicalize(pathname):
 
 
 def get_to_emails(user):
-    return [k.kindle_name for k in user.kindle_names.all()]
+    return [k.kindle_name + '@kindle.com' for k in user.kindle_names.all()]
 
 
 class KindleboxException(Exception):
