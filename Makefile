@@ -11,10 +11,13 @@ pull:
 	@echo "\nInstalling virtualenv requirements...";
 	pip install -r requirements.txt
 	jsx app/static/js/src app/static/js/build
+
+	sudo service celeryd stop
 	@echo "\nRunning any migrations..."
 	./run.py db upgrade
+	sudo service celeryd start
+
 	sudo service uwsgi restart
-	sudo service celeryd restart
 
 heroku:
 	@echo "Starting push to Heroku..."
