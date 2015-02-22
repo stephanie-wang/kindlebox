@@ -1,3 +1,4 @@
+from collections import namedtuple
 import hashlib
 import logging
 import mimetypes
@@ -28,8 +29,8 @@ except OSError:
 
 # And can only email 25 books at a time. Sendgrid only allows 20MB at a time,
 # after encoding to email text, so more like 15.
-BOOK_ATTACHMENTS_LIMIT = 25
-ATTACHMENTS_SIZE_LIMIT = 15 * (10**6)
+ATTACHMENTS_LIMIT = 25
+ATTACHMENTS_SIZE_LIMIT = 20 * (10**6)
 
 # Supported filetypes.
 # According to:
@@ -100,57 +101,56 @@ def upload_welcome_pdf(dropbox_id):
 def _kindlebox(dropbox_id, user, client):
     delta = client.delta(user.cursor)
 
-    added_book_sizes = dict(get_added_book_sizes(delta['entries'], client))
+    # Process delta to get added and removed books. Also download any newly
+    # added books and get the hashes.
+    # `added_books` is a named tuple of ['pathname', 'book_hash', 'size'].
+    added_books = get_added_books(delta['entries'], client, user.id)
     removed_books = get_removed_books(delta['entries'])
     log.debug("Delta contains {0} added books, {1} removed "
-              "books".format(len(added_book_sizes), len(removed_books)))
+              "books".format(len(added_books), len(removed_books)))
 
-    if len(added_book_sizes) == 0 and len(removed_books) == 0:
+    # If there are no more changes to process, update the cursor and we are
+    # done.
+    if len(added_books) == 0 and len(removed_books) == 0:
+        user.cursor = delta['cursor']
+        db.session.commit()
         return True
 
-    # Download the changed files and get the hashes.
-    # Also record the hashes/paths of any newly added books.
-    new_books, duplicate_books = get_new_and_duplicates(client,
-                                                        added_book_sizes,
-                                                        user.id)
+    # Remove deleted books before adding new ones to avoid deleting files where
+    # only the content has changed.
+    remove_books(user.id, removed_books)
 
     # Email ze books.
     # Add all books that were supposed to be emailed. If email was
     # unsuccessful, mark book as unsent.
     email_from = user.emailer
-    email_to = [row.kindle_name + '@kindle.com' for row in user.kindle_names.all()]
-    attachments = {}
+    email_to = get_to_emails(user)
+    attachments = []
     attachment_size = 0
-    for book_hash, book_path in new_books.iteritems():
-        if (attachment_size + added_book_sizes[book_path] >
-                ATTACHMENTS_SIZE_LIMIT or len(attachments) ==
-                BOOK_ATTACHMENTS_LIMIT):
+    for book in added_books:
+        # If the next book added will put us over the attachment size limit
+        # (and there are attachments to send), or if we've reached the maximum
+        # number of attachments, send this batch.
+        if ((attachment_size + book.size > ATTACHMENTS_SIZE_LIMIT and len(attachments > 0))
+                or len(attachments) == ATTACHMENTS_LIMIT):
             email_attachments(email_from, email_to, attachments, user.id)
-            attachments = {}
+            attachments = []
             attachment_size = 0
 
-        attachments[book_hash] = book_path
-        attachment_size += added_book_sizes[book_path]
+        attachments.append(book)
+        attachment_size += book.size
 
     if len(attachments) > 0:
         email_attachments(email_from, email_to, attachments, user.id)
 
-    # Commit all new books that should've been emailed.
-    db.session.commit()
-
-    # Add duplicates and remove the deleted books from the database.
-    # books from and add the duplicates to the database.
-    add_duplicate_books(user.id, duplicate_books)
-    remove_books(user.id, removed_books)
-
     # Update the Dropbox delta cursor in database.
     user.cursor = delta['cursor']
 
-    db.session.commit()
-
     # Clean up the temporary files.
-    if len(added_book_sizes) > 0:
+    if len(added_books) > 0:
         clear_tmp_directory()
+
+    db.session.commit()
 
     return False
 
@@ -196,20 +196,91 @@ def kindlebox(dropbox_id):
     lock.release()
 
 
+@celery.task(ignore_result=True)
+def resend_books(dropbox_id):
+    # Lock per user.
+    lock_id = '{0}-lock-{1}'.format(resend_books.__name__, dropbox_id)
+    lock = redis.lock(lock_id, timeout=LOCK_EXPIRE)
+
+    # If unable to acquire lock, discard the task.
+    if not lock.acquire(blocking=False):
+        log.debug("Couldn't acquire lock {0}.".format(lock_id))
+        return False
+
+    log.debug("Lock {0} acquired.".format(lock_id))
+
+    # Only resend books for active users.
+    user = User.query.filter_by(dropbox_id=dropbox_id, active=True).first()
+    if user is None:
+        lock.release()
+        return
+
+    log.info("Processing book resend for user id {0}".format(user.id))
+
+    # Set the books to have the upper attachment limit as their size to ensure
+    # that they send individually.
+    unsent_books = [BookTuple(pathname=book.pathname,
+                              book_hash=book.book_hash,
+                              size=ATTACHMENTS_SIZE_LIMIT)
+                    for book in user.books.filter_by(unsent=True).all()]
+
+    # Re-download all the books that failed to send before. Make sure the
+    # hashes match.
+    client = DropboxClient(user.access_token)
+    for book in unsent_books:
+        dropbox_book_hash = download_book(client, book.pathname)
+        if dropbox_book_hash != book.book_hash:
+            log.warning("Downloaded book {book_path} doesn't match unsent book "
+                        "for user id {user_id}".format(book_path=book.pathname,
+                                                       user_id=user.id))
+
+    # Resend the books and clean up the temporary files.
+    if len(unsent_books) > 0:
+        email_attachments(user.emailer, get_to_emails(user), unsent_books, user.id)
+        clear_tmp_directory()
+
+    db.session.commit()
+
+    lock.release()
+
+
 def mimetypes_filter(path):
     return mimetypes.guess_type(path)[0] in BOOK_MIMETYPES
 
 
-def get_added_book_sizes(delta_entries, client):
+BookTuple = namedtuple('Book', ['pathname', 'book_hash', 'size'])
+def get_added_books(delta_entries, client, user_id):
     """
-    Return a list of tuples of (book path, book size) representing books added
-    during this delta. Book path must be of one of the accepted mimetypes and
-    book size is under the BOOK_SIZE_LIMIT.
+    Return a list of Book tuples of the form ['pathname', 'book_hash', 'size'].
+    All books in this list have the correct mimetype, are under the size limit,
+    and don't have a duplicate hash in the database (i.e. not a filepath
+    rename).
     """
-    added_entries = [(canonicalize(entry[0]), entry[1]['bytes']) for entry in delta_entries if
-                     entry[1] is not None and not entry[1]['is_dir']]
-    return [entry for entry in added_entries if (mimetypes_filter(entry[0]) and
-            entry[1] < ATTACHMENTS_SIZE_LIMIT)]
+    added_entries = []
+    for entry in delta_entries:
+        pathname, metadata = entry
+        pathname = canonicalize(pathname)
+
+        # First check that it's not a removed pathname.
+        if metadata is None:
+            continue
+        # Check that pathname is a file, has an okay mimetype and is under the
+        # size limit.
+        if (metadata['is_dir'] or mimetypes_filter(pathname) is None or
+                metadata['bytes'] > ATTACHMENTS_SIZE_LIMIT):
+            continue
+
+        book_hash = download_book(client, pathname)
+
+        # Make sure that the book is not a duplicate of a previously added book
+        # (probably a renamed file).
+        if (Book.query.filter_by(user_id=user_id)
+                      .filter_by(book_hash=book_hash).count() == 0):
+            added_entries.append(BookTuple(pathname=pathname,
+                                           book_hash=book_hash,
+                                           size=metadata['bytes']))
+
+    return added_entries
 
 
 def get_removed_books(delta_entries):
@@ -219,24 +290,6 @@ def get_removed_books(delta_entries):
     removed_entries = [canonicalize(entry[0]) for entry in delta_entries if
                        entry[1] is None]
     return [entry for entry in removed_entries if mimetypes_filter(entry)]
-
-
-def get_new_and_duplicates(client, added_book_sizes, user_id):
-    duplicate_books = {}
-    new_books = {}
-    for book_path, book_byte_size in added_book_sizes.iteritems():
-        book_hash = download_book(client, book_path)
-
-        # Make sure that the book is not a duplicate of either a previously
-        # added book or a book added on this round.
-        if (Book.query.filter_by(user_id=user_id)
-                .filter_by(book_hash=book_hash).count() == 0 and
-                book_hash not in new_books):
-            new_books[book_hash] = book_path
-        else:
-            duplicate_books[book_hash] = book_path
-
-    return new_books, duplicate_books
 
 
 def download_book(client, book_path):
@@ -273,43 +326,39 @@ def remove_books(user_id, removed_books):
             db.session.delete(book)
 
 
-def _add_book(user_id, book_path, book_hash, unsent):
-    book = Book(user_id, book_path, book_hash, unsent=unsent)
-    db.session.add(book)
+def add_book(user_id, book, unsent):
+    book_row = Book.query.filter_by(user_id=user_id,
+                                    book_hash=book.book_hash,
+                                    pathname=book.pathname).first()
+    if book_row is None:
+        book_row = Book(user_id, book.pathname, book.book_hash, unsent=unsent)
+        db.session.add(book_row)
 
-
-def add_duplicate_books(user_id, duplicate_books):
-    for book_hash, book_path in duplicate_books.iteritems():
-        duplicate = (Book.query.filter_by(user_id=user_id)
-                         .filter_by(book_hash=book_hash).first())
-        # There should always be a duplicate?
-        if duplicate is None:
-            continue
-        _add_book(user_id, book_path, book_hash, duplicate.unsent)
+    book_row.unsent = unsent
 
 
 def email_attachments(email_from, email_to, attachments, user_id):
-    attachment_paths = get_attachment_paths(attachments.values())
+    attachment_paths = get_attachment_paths(book.pathname for book in attachments)
     log.debug("Sending email to " + ' '.join(email_to) + " " + ' '.join(attachment_paths))
 
     try:
         # First try to batch email.
         _email_attachments(email_from, email_to, attachment_paths)
-        for book_hash, book_path in attachments.iteritems():
-            _add_book(user_id, book_path, book_hash, False)
+        for book in attachments:
+            add_book(user_id, book, False)
     except KindleboxException:
         log.error("Failed to send books for user id {0}".format(user_id),
                   exc_info=True)
 
         # If fail to batch email, try sending individually instead.
-        for book_hash, book_path in attachments.iteritems():
+        for book in attachments:
             try:
-                _email_attachments(email_from, email_to, get_attachment_paths([book_path]))
-                _add_book(user_id, book_path, book_hash, False)
+                _email_attachments(email_from, email_to, get_attachment_paths([book.pathname]))
+                add_book(user_id, book, False)
             except KindleboxException:
                 log.error("Failed to resend book for user id {0}".format(user_id),
                           exc_info=True)
-                _add_book(user_id, book_path, book_hash, True)
+                add_book(user_id, book, True)
 
 
 def _email_attachments(email_from, email_to, attachment_paths):
@@ -365,6 +414,10 @@ def get_attachment_paths(book_paths):
 
 def canonicalize(pathname):
     return pathname.lower()
+
+
+def get_to_emails(user):
+    return [k.kindle_name for k in user.kindle_names.all()]
 
 
 class KindleboxException(Exception):
