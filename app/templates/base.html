@@ -77,38 +77,38 @@
                   <button type="button" class="btn btn-default amount-btn active" amount="1">$1</button>
                   <button type="button" class="btn btn-default amount-btn" amount="5">$5</button>
                   <button type="button" class="btn btn-default amount-btn" amount="20">$20</button>
-                  <button type="button" class="btn btn-default amount-btn">$<input id="other-amount" type="text" size="4" /></button>
+                  <button type="button" class="btn btn-default amount-btn">$<input id="other-amount" type="text" size="4" placeholder="X"/></button>
                 </div>
               </div>
 
               <div class="form-row">
                 <label class="form-row-label">
                   <span class="form-row-key">Email: </span>
-                  <input type="text" name="emailAddress" size="20" class="form-row-input form-input-formatting"/>
+                  <input type="text" name="emailAddress" size="20" class="form-row-input form-input-formatting" placeholder="you@gmail.com"/>
                 </label>
               </div>
 
               <div class="form-row">
                 <label class="form-row-label">
                   <span class="form-row-key">Card Number: </span>
-                  <input type="text" size="20" data-stripe="number" class="form-row-input form-input-formatting"/>
+                  <input type="text" size="20" data-stripe="number" class="form-row-input form-input-formatting" placeholder="XXXXXXXXXXXXXXXX"/>
                 </label>
               </div>
 
               <div class="form-row">
                 <label class="form-row-label">
                   <span class="form-row-key">CVC: </span>
-                  <input type="text" size="4" data-stripe="cvc" class="form-input-formatting"/>
+                  <input type="text" size="4" data-stripe="cvc" class="form-input-formatting" placeholder="XXX"/>
                 </label>
               </div>
 
               <div class="form-row">
                 <label class="form-row-label">
-                  <span class="form-row-key">Expiration (MM/YYYY): </span>
+                  <span class="form-row-key">Expiration: </span>
                   <span class="form-row-input">
-                    <input type="text" size="2" data-stripe="exp-month" class="form-input-formatting"/>
+                    <input type="text" size="3" data-stripe="exp-month" class="form-input-formatting" placeholder="MM"/>
                     <span> / </span>
-                    <input type="text" size="4" data-stripe="exp-year" class="form-input-formatting"/>
+                    <input type="text" size="4" data-stripe="exp-year" class="form-input-formatting" placeholder="YYYY"/>
                   </span>
                 </label>
               </div>

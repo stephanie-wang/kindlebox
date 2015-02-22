@@ -66,6 +66,7 @@ function stripeResponseHandler(status, response) {
           "You should receive an email shortly with a receipt.");
       } else {
         $form.find('.payment-errors').text(data.message);
+        $form.find('button').prop('disabled', false);
       }
     });
   }
