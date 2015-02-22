@@ -50,7 +50,8 @@ def error(e):
 
 @app.route('/start')
 def splash():
-    return render_kindlebox_template('splash.html')
+    return render_kindlebox_template('splash.html',
+                                     donate=request.args.get('donate'))
 
 
 @app.route('/about')
@@ -62,7 +63,7 @@ def about():
 def home():
     dropbox_id = session.get('dropbox_id')
     if dropbox_id is None and not request.args.get('redirect'):
-        return redirect(url_for('splash'))
+        return redirect(url_for('splash', **request.args))
 
     if request.MOBILE:
         return render_kindlebox_template('mobile/index.html')
@@ -78,6 +79,7 @@ def home():
         'emailer': user.emailer,
         'app_url': app.config['APP_URL'],
         'mobile': request.MOBILE,
+        'donate': request.args.get('donate')
         }
 
     return render_kindlebox_template('index.html', **response)
@@ -351,5 +353,6 @@ def get_logged_in_info():
 def render_kindlebox_template(template, **args):
     args['dev'] = app.config.get('DEV', False)
     args['STRIPE_PUBLIC_KEY'] = app.config.get('STRIPE_PUBLIC_KEY', '')
+    args['show_donations_modal'] = args.get('donate')
     args.update(get_logged_in_info())
     return render_template(template, **args)

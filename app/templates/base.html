@@ -159,7 +159,11 @@
             text: "Check out Kindlebox, and receive books on your Kindle through Dropbox!"
           }
         }
-      }
+      };
+
+      {% if show_donations_modal %}
+      $('#donations-modal').modal();
+      {% endif %}
     </script>
 
     {% block scripts %}{% endblock %}
