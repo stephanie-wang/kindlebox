@@ -82,7 +82,7 @@ def upload_welcome_pdf(dropbox_id):
     client = DropboxClient(user.access_token)
     try:
         with open('app/static/kindlebox_welcome.pdf', 'rb') as f:
-            response = client.put_file('Welcome to Kindlebox.pdf', f)
+            response = client.put_file('Welcome to Kindlebox.pdf', f, overwrite=True)
             if response:
                 log.info("Welcome PDF sent to user ID {0}.".format(user.id))
             else:
@@ -195,8 +195,8 @@ def kindlebox(dropbox_id):
     # dropped, but hopefully this is better than cluttering the task queues.
     client = DropboxClient(user.access_token)
     while True:
-        log.debug("Processing one kindlebox iteration for dropbox id "
-                  "{0}".format(dropbox_id))
+        log.debug("Processing one kindlebox iteration for user id "
+                  "{0}".format(user.id))
         try:
             done = _kindlebox(dropbox_id, user, client)
             if done:
