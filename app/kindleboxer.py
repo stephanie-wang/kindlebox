@@ -30,8 +30,8 @@ except OSError:
 # And can only email 25 books at a time. Sendgrid only allows 20MB at a time,
 # after encoding to email text, so more like 15.
 ATTACHMENTS_LIMIT = 25
-ATTACHMENTS_SIZE_LIMIT = 15 * (10**6)
-AMAZON_SIZE_LIMIT = 25 * (10**6)
+ATTACHMENTS_SIZE_LIMIT = 20 * (10**6)
+AMAZON_SIZE_LIMIT = 50 * (10**6)
 
 # Supported filetypes.
 # According to:
@@ -41,12 +41,16 @@ mimetypes.add_type('application/x-mobipocket-ebook', '.prc')
 mimetypes.add_type('application/vnd.amazon.ebook', '.azw')
 mimetypes.add_type('application/vnd.amazon.ebook', '.azw1')
 
-# Amazon doesn't support epub, but we do!
-mimetypes.add_type('application/epub+zip', '.epub')
+# Amazon doesn't support these formats, but Kindlebox does!
 EPUB_MIMETYPE = 'application/epub+zip'
+CBR_MIMETYPE = 'application/x-cbr'
+CBZ_MIMETYPE = 'application/x-cbz'
+CONVERTIBLE_MIMETYPES = {EPUB_MIMETYPE,
+                         CBR_MIMETYPE,
+                         CBZ_MIMETYPE}
+mimetypes.add_type(EPUB_MIMETYPE, '.epub')
 
-BOOK_MIMETYPES = {
-    'application/epub+zip',
+BOOK_MIMETYPES = CONVERTIBLE_MIMETYPES.union({
     'application/vnd.amazon.ebook',
     'text/plain',
     'application/x-mobipocket-ebook',
@@ -61,7 +65,7 @@ BOOK_MIMETYPES = {
     'image/gif',
     'image/x-ms-bmp',
     'image/png',
-    }
+    })
 BOOK_CHUNK = 5
 
 
@@ -136,9 +140,11 @@ def _kindlebox(dropbox_id, user, client):
     attachments = []
     attachment_size = 0
     for book in added_books:
-        # If the next book added will put us over the attachment size limit
-        # (and there are attachments to send), or if we've reached the maximum
-        # number of attachments, send this batch.
+        # If the next book added will put us over the attachment size limit or
+        # if we've reached the maximum number of attachments, send this batch.
+        # NOTE: An individual book with size over the limit will still get sent
+        # using this code. We want to do this in case it actually is possible
+        # to send the file (who knows what sendgrid's limits are?).
         if ((attachment_size + book.size > ATTACHMENTS_SIZE_LIMIT and len(attachments) > 0)
                 or len(attachments) == ATTACHMENTS_LIMIT):
             email_attachments(email_from, email_to, attachments, user.id)
@@ -286,7 +292,7 @@ def get_added_books(delta_entries, client, user_id):
             continue
         # Check that pathname is a file, has an okay mimetype and is under the
         # size limit.
-        if (metadata['is_dir'] or mimetypes_filter(pathname) is None or
+        if (metadata['is_dir'] or mimetypes_filter(pathname) or
                 metadata['bytes'] > AMAZON_SIZE_LIMIT):
             continue
 
@@ -351,7 +357,8 @@ def download_book(client, book_path, user_id):
             tmp_book.write(data)
             md5.update(data)
 
-    mobi_tmp_path = epub_to_mobi_path(tmp_path)
+    # Attempt to convert any books of type in `CONVERTIBLE_MIMETYPES` to .mobi.
+    mobi_tmp_path = convert_to_mobi_path(tmp_path)
     if mobi_tmp_path is not None:
         try:
             log.info("Converting book for user id {0}".format(user_id))
@@ -428,9 +435,10 @@ def _email_attachments(email_from, email_to, attachment_paths):
         raise KindleboxException(message)
 
 
-def epub_to_mobi_path(epub_path):
-    if mimetypes.guess_type(epub_path)[0] == EPUB_MIMETYPE:
-        return epub_path[:-len('epub')] + 'mobi'
+def convert_to_mobi_path(path):
+    if mimetypes.guess_type(path)[0] in CONVERTIBLE_MIMETYPES:
+        stripped_path = os.path.splitext(path)[0]
+        return '{path}.mobi'.format(path=stripped_path)
 
 
 def _clear_directory(directory):
@@ -465,10 +473,14 @@ def get_attachment_paths(book_paths):
     attachment_paths = []
     for book_path in book_paths:
         tmp_path = get_tmp_path(book_path)
-        mobi_tmp_path = epub_to_mobi_path(tmp_path)
+
+        # If this book got converted, get the .mobi path instead.
+        mobi_tmp_path = convert_to_mobi_path(tmp_path)
         if mobi_tmp_path is not None:
             tmp_path = mobi_tmp_path
+
         attachment_paths.append(tmp_path)
+
     return attachment_paths
 
 
