@@ -354,6 +354,7 @@ def download_book(client, book_path, user_id):
     mobi_tmp_path = epub_to_mobi_path(tmp_path)
     if mobi_tmp_path is not None:
         try:
+            log.info("Converting book for user id {0}".format(user_id))
             subprocess.check_call(['ebook-convert', tmp_path, mobi_tmp_path])
         except subprocess.CalledProcessError as e:
             log.error("Failed to convert epub {book} for user id "
