@@ -292,7 +292,7 @@ def get_added_books(delta_entries, client, user_id):
             continue
         # Check that pathname is a file, has an okay mimetype and is under the
         # size limit.
-        if (metadata['is_dir'] or mimetypes_filter(pathname) or
+        if (metadata['is_dir'] or not mimetypes_filter(pathname) or
                 metadata['bytes'] > AMAZON_SIZE_LIMIT):
             continue
 
@@ -309,12 +309,6 @@ def get_added_books(delta_entries, client, user_id):
         # (probably a renamed file).
         if (Book.query.filter_by(user_id=user_id)
                       .filter_by(book_hash=book.book_hash).count() > 0):
-            continue
-
-        # If the book really was newly added, but we're over the current email
-        # service limit save it for later.
-        if metadata['bytes'] > ATTACHMENTS_SIZE_LIMIT:
-            add_book(user_id, book, True)
             continue
 
         added_entries.append(book)
