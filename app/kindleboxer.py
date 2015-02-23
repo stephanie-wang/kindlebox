@@ -31,6 +31,7 @@ except OSError:
 # after encoding to email text, so more like 15.
 ATTACHMENTS_LIMIT = 25
 ATTACHMENTS_SIZE_LIMIT = 20 * (10**6)
+AMAZON_SIZE_LIMIT = 25 * (10**6)
 
 # Supported filetypes.
 # According to:
@@ -227,19 +228,22 @@ def resend_books(dropbox_id):
     # Re-download all the books that failed to send before. Make sure the
     # hashes match.
     client = DropboxClient(user.access_token)
-    for book in unsent_books:
-        dropbox_book_hash = download_book(client, book.pathname)
-        if dropbox_book_hash != book.book_hash:
-            log.warning("Downloaded book {book_path} doesn't match unsent book "
-                        "for user id {user_id}".format(book_path=book.pathname,
-                                                       user_id=user.id))
+    try:
+        for book in unsent_books:
+            dropbox_book_hash = download_book(client, book.pathname)
+            if dropbox_book_hash != book.book_hash:
+                log.warning("Downloaded book {book_path} doesn't match unsent book "
+                            "for user id {user_id}".format(book_path=book.pathname,
+                                                           user_id=user.id))
 
-    # Resend the books and clean up the temporary files.
-    if len(unsent_books) > 0:
-        email_attachments(user.emailer, get_to_emails(user), unsent_books, user.id)
-        clear_tmp_directory()
+        # Resend the books and clean up the temporary files.
+        if len(unsent_books) > 0:
+            email_attachments(user.emailer, get_to_emails(user), unsent_books, user.id)
+            clear_tmp_directory()
 
-    db.session.commit()
+        db.session.commit()
+    except:
+        log.error("Failed to resend books for user id {0}".format(user.id))
 
     lock.release()
 
@@ -267,18 +271,26 @@ def get_added_books(delta_entries, client, user_id):
         # Check that pathname is a file, has an okay mimetype and is under the
         # size limit.
         if (metadata['is_dir'] or mimetypes_filter(pathname) is None or
-                metadata['bytes'] > ATTACHMENTS_SIZE_LIMIT):
+                metadata['bytes'] > AMAZON_SIZE_LIMIT):
             continue
 
-        book_hash = download_book(client, pathname)
+        book = BookTuple(pathname=pathname,
+                         book_hash=download_book(client, pathname),
+                         size=metadata['bytes'])
 
         # Make sure that the book is not a duplicate of a previously added book
         # (probably a renamed file).
         if (Book.query.filter_by(user_id=user_id)
-                      .filter_by(book_hash=book_hash).count() == 0):
-            added_entries.append(BookTuple(pathname=pathname,
-                                           book_hash=book_hash,
-                                           size=metadata['bytes']))
+                      .filter_by(book_hash=book.book_hash).count() > 0):
+            continue
+
+        # If the book really was newly added, but we're over the current email
+        # service limit save it for later.
+        if metadata['bytes'] > ATTACHMENTS_SIZE_LIMIT:
+            add_book(user_id, book, True)
+            continue
+
+        added_entries.append(book)
 
     return added_entries
 
