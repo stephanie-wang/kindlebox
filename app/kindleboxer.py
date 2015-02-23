@@ -132,7 +132,7 @@ def _kindlebox(dropbox_id, user, client):
         # If the next book added will put us over the attachment size limit
         # (and there are attachments to send), or if we've reached the maximum
         # number of attachments, send this batch.
-        if ((attachment_size + book.size > ATTACHMENTS_SIZE_LIMIT and len(attachments > 0))
+        if ((attachment_size + book.size > ATTACHMENTS_SIZE_LIMIT and len(attachments) > 0)
                 or len(attachments) == ATTACHMENTS_LIMIT):
             email_attachments(email_from, email_to, attachments, user.id)
             attachments = []
