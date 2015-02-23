@@ -100,6 +100,13 @@ def upload_welcome_pdf(dropbox_id):
 
 
 def _kindlebox(dropbox_id, user, client):
+    """
+    The main body of a `kindlebox` task. Processes a single Dropbox delta for
+    the given Dropbox ID. For any newly added books that satisfy the
+    requirements (under size limit, etc.), attempts to email as many of them as
+    possible. For any removed books, delete them from the database. Finally,
+    update the user's Dropbox API cursor.
+    """
     delta = client.delta(user.cursor)
 
     # Process delta to get added and removed books. Also download any newly
@@ -158,6 +165,11 @@ def _kindlebox(dropbox_id, user, client):
 
 @celery.task(ignore_result=True)
 def kindlebox(dropbox_id):
+    """
+    Atomic task that continually processes any Dropbox changes for the user
+    associated with the given dropbox ID until there are no more changes. This
+    includes sending new books and removing old ones.
+    """
     # Lock per user.
     lock_id = '{0}-lock-{1}'.format(kindlebox.__name__, dropbox_id)
     lock = redis.lock(lock_id, timeout=LOCK_EXPIRE)
@@ -199,6 +211,10 @@ def kindlebox(dropbox_id):
 
 @celery.task(ignore_result=True)
 def resend_books(dropbox_id):
+    """
+    Task to resend any books associated with the given dropbox ID that are
+    marked as `unsent`.
+    """
     # Lock per user.
     lock_id = '{0}-lock-{1}'.format(resend_books.__name__, dropbox_id)
     lock = redis.lock(lock_id, timeout=LOCK_EXPIRE)
@@ -230,7 +246,7 @@ def resend_books(dropbox_id):
     client = DropboxClient(user.access_token)
     try:
         for book in unsent_books:
-            dropbox_book_hash = download_book(client, book.pathname)
+            dropbox_book_hash = download_book(client, book.pathname, user.id)
             if dropbox_book_hash != book.book_hash:
                 log.warning("Downloaded book {book_path} doesn't match unsent book "
                             "for user id {user_id}".format(book_path=book.pathname,
@@ -275,8 +291,13 @@ def get_added_books(delta_entries, client, user_id):
             continue
 
         book = BookTuple(pathname=pathname,
-                         book_hash=download_book(client, pathname),
+                         book_hash=download_book(client, pathname, user_id),
                          size=metadata['bytes'])
+
+        # Failed to download or convert file, so skip it and mark as unsent.
+        if book.book_hash is None:
+            add_book(user_id, book, True)
+            continue
 
         # Make sure that the book is not a duplicate of a previously added book
         # (probably a renamed file).
@@ -304,7 +325,15 @@ def get_removed_books(delta_entries):
     return [entry for entry in removed_entries if mimetypes_filter(entry)]
 
 
-def download_book(client, book_path):
+def download_book(client, book_path, user_id):
+    """
+    Download the given book path, for the given user ID, from the Dropbox
+    client to a temporary path. Make all the directories in the given book path
+    at the temporary root folder if they don't already exist. If the book is an
+    epub, convert it to mobi.
+
+    Return the hash of the downloaded (and converted) file.
+    """
     # Make all the necessary nested directories in the temporary directory.
     tmp_path = get_tmp_path(book_path)
     try:
@@ -324,7 +353,12 @@ def download_book(client, book_path):
 
     mobi_tmp_path = epub_to_mobi_path(tmp_path)
     if mobi_tmp_path is not None:
-        subprocess.check_call(['ebook-convert', tmp_path, mobi_tmp_path])
+        try:
+            subprocess.check_call(['ebook-convert', tmp_path, mobi_tmp_path])
+        except subprocess.CalledProcessError as e:
+            log.error("Failed to convert epub {book} for user id "
+                      "{user_id}".format(book=book_path, user_id=user_id))
+            return None
 
     book_hash = md5.hexdigest()
 
@@ -332,6 +366,10 @@ def download_book(client, book_path):
 
 
 def remove_books(user_id, removed_books):
+    """
+    Remove all the given book paths from the user associated with the given IDs
+    from the database.
+    """
     for book_path in removed_books:
         book = Book.query.filter_by(user_id=user_id).filter_by(pathname=book_path).first()
         if book is not None:
@@ -339,6 +377,9 @@ def remove_books(user_id, removed_books):
 
 
 def add_book(user_id, book, unsent):
+    """
+    Add the given book (in the form of a BookTuple) and mark it as `unsent`.
+    """
     book_row = Book.query.filter_by(user_id=user_id,
                                     book_hash=book.book_hash,
                                     pathname=book.pathname).first()
@@ -350,6 +391,12 @@ def add_book(user_id, book, unsent):
 
 
 def email_attachments(email_from, email_to, attachments, user_id):
+    """
+    Given a 'from' email address and a list of 'to' email addresses, try to
+    email as many of the attachments in the given list as possible. For each
+    attachment, add the book to the user associated with the given ID and mark
+    whether it was successfully emailed or not.
+    """
     attachment_paths = get_attachment_paths(book.pathname for book in attachments)
     log.debug("Sending email to " + ' '.join(email_to) + " " + ' '.join(attachment_paths))
 
