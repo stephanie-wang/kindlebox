@@ -11,9 +11,13 @@
     url_for('home') }}">homepage</a> and try again?
   </h2>
 </div>
-<div>
-  If you think this is an issue with Kindlebox, <a href="mailto:swang93@mit.edu">shoot us an email</a>!{% if logged_in %} Please include your user ID <b>{{ user_id }}</b>!{% endif %}
-</div>
+<p>
+    If you're reaching this page after trying to activate on Amazon, make sure
+    to add a fresh copy of the bookmarklet on your bookmarks bar.
+</p>
+<p>
+    If that doesn't work out for you, <a href="mailto:swang93@mit.edu?subject=Kindlebox issue user ID {{ user_id }}">shoot us an email</a>!
+</p>
 
 {% endblock %}
 
