@@ -45,3 +45,9 @@ analytics.write_key = '2afEcXvTS827n9aLqcisLOjJH1XF83uB'
 
 from app import models
 from app import views
+
+
+from commands import CeleryTasksCommand
+from commands import ResetUserCommand
+manager.add_command('tasks', CeleryTasksCommand)
+manager.add_command('reset-user', ResetUserCommand)
