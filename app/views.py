@@ -30,6 +30,7 @@ from app.models import KindleName
 
 logging.basicConfig()
 log = logging.getLogger()
+log.setLevel(logging.INFO)
 log.info("Starting app log...")
 
 DEBUG = app.config.get('DEBUG', False)
@@ -146,7 +147,7 @@ def activate():
     if not user.active:
         if 'kindle_names' not in request.form:
             log.warn("Error activating, user with dropbox id {0} submitted "
-                     "invalid kindle names".format(dropbox_id))
+                     "no kindle names".format(dropbox_id))
             abort(400)
 
         # Add all the Kindle usernames.
@@ -154,14 +155,22 @@ def activate():
         try:
             kindle_names = json.loads(form_kindle_names)
         except json.JSONDecodeError:
-            log.warn("Error activating, user with dropbox id {0} submitted "
-                     "invalid kindle names".format(dropbox_id))
+            log.warn("Error activating, user with dropbox id {dropbox_id} "
+                     "submitted invalid kindle names "
+                     "{kindle_names}".format(dropbox_id=dropbox_id,
+                                             kindle_names=form_kindle_names))
             abort(400)
 
         if type(kindle_names) != list:
-            log.warn("Error activating, user with dropbox id {0} submitted "
-                     "invalid kindle names".format(dropbox_id))
+            log.warn("Error activating, user with dropbox id {dropbox_id} did "
+                     "not submit list of kindle names "
+                     "{kindle_names}".format(dropbox_id=dropbox_id,
+                                             kindle_names=kindle_names))
             abort(400)
+
+        log.info("User with dropbox id {dropbox_id} submitting list of kindle "
+                 "names {kindle_names}".format(dropbox_id=dropbox_id,
+                                               kindle_names=kindle_names))
 
         for kindle_name in kindle_names:
             kindle_name = validate_kindle_name(kindle_name)
