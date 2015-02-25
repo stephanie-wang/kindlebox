@@ -356,12 +356,16 @@ def download_book(client, book_path, user_id):
     # Attempt to convert any books of type in `CONVERTIBLE_MIMETYPES` to .mobi.
     mobi_tmp_path = convert_to_mobi_path(tmp_path)
     if mobi_tmp_path is not None:
-        try:
-            log.info("Converting book for user id {0}".format(user_id))
-            subprocess.check_call(['ebook-convert', tmp_path, mobi_tmp_path])
-        except subprocess.CalledProcessError as e:
-            log.error("Failed to convert epub {book} for user id "
-                      "{user_id}".format(book=book_path, user_id=user_id))
+        log.info("Converting book for user id {0}".format(user_id))
+        p = subprocess.Popen(['ebook-convert', tmp_path, mobi_tmp_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        if stderr:
+            log.error("Failed to ebook-convert {book} for user id {user_id}\n"
+                      "STDOUT: {stdout}\n"
+                      "STDERR: {stderr}\n".format(book=book_path,
+                                                  user_id=user_id,
+                                                  stdout=stdout,
+                                                  stderr=stderr))
             return None
 
     book_hash = md5.hexdigest()
@@ -409,7 +413,7 @@ def email_attachments(email_from, email_to, attachments, user_id):
         _email_attachments(email_from, email_to, attachment_paths)
         for book in attachments:
             add_book(user_id, book, False)
-    except Exception:
+    except:
         log.error("Failed to send books for user id {0}".format(user_id),
                   exc_info=True)
 
@@ -418,7 +422,7 @@ def email_attachments(email_from, email_to, attachments, user_id):
             try:
                 _email_attachments(email_from, email_to, get_attachment_paths([book.pathname]))
                 add_book(user_id, book, False)
-            except Exception:
+            except:
                 log.error("Failed to resend book for user id {0}".format(user_id),
                           exc_info=True)
                 add_book(user_id, book, True)
