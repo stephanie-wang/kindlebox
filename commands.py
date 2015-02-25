@@ -13,17 +13,31 @@ class CeleryTasksCommand(Command):
     Sets off the `kindlebox` celery task for all active users and the
     `resend_books` celery task for all unsent books.
     """
-    def run(self):
-        # Kindleboxing active users.
-        active_users = User.query.filter_by(active=True).all()
-        for user in active_users:
-            kindlebox.delay(user.dropbox_id)
+    option_list = (
+            Option('--no-kindlebox',
+                   dest='no_kindlebox',
+                   action='store_true',
+                   help="Don't run the kindlebox task"),
+            Option('--no-resend-books',
+                   dest='no_resend_books',
+                   action='store_true',
+                   help="Don't run the resend books task"),
+            )
+    def run(self, no_kindlebox, no_resend_books):
+        if not no_kindlebox:
+            # Kindleboxing active users.
+            active_users = User.query.filter_by(active=True).all()
+            print "Kindleboxing {0} active users...".format(len(active_users))
+            for user in active_users:
+                kindlebox.delay(user.dropbox_id)
 
-        # Resending any unsent books.
-        unsent_books = Book.query.filter_by(unsent=True).all()
-        unsent_dropbox_ids = set(book.user.dropbox_id for book in unsent_books)
-        for dropbox_id in unsent_dropbox_ids:
-            resend_books.delay(dropbox_id)
+        if not no_resend_books:
+            # Resending any unsent books.
+            unsent_books = Book.query.filter_by(unsent=True).all()
+            print "Resending {0} unsent books...".format(len(unsent_books))
+            unsent_dropbox_ids = set(book.user.dropbox_id for book in unsent_books)
+            for dropbox_id in unsent_dropbox_ids:
+                resend_books.delay(dropbox_id)
 
 
 class ResetUserCommand(Command):
