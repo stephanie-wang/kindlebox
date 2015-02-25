@@ -13,6 +13,8 @@ pull:
 	jsx app/static/js/src app/static/js/build
 
 	sudo service celeryd stop
+	# Clean up any temporary files from the celery workers
+	sudo rm -r /tmp/kindlebox/*
 	@echo "\nRunning any migrations..."
 	./run.py db upgrade
 	sudo service celeryd start
