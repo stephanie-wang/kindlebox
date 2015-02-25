@@ -265,7 +265,8 @@ def resend_books(dropbox_id):
 
         db.session.commit()
     except:
-        log.error("Failed to resend books for user id {0}".format(user.id))
+        log.error("Failed to resend books for user id {0}".format(user.id),
+                  exc_info=True)
 
     lock.release()
 

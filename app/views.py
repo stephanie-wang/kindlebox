@@ -28,7 +28,9 @@ from app.models import User
 from app.models import KindleName
 
 
+logging.basicConfig()
 log = logging.getLogger()
+log.info("Starting app log...")
 
 DEBUG = app.config.get('DEBUG', False)
 
@@ -131,14 +133,20 @@ def validate_kindle_name(kindle_name):
 def activate():
     dropbox_id = session.get('dropbox_id')
     if dropbox_id is None:
+        log.warn("Error activating, user with dropbox id {0} wasn't logged "
+                 "in".format(dropbox_id))
         abort(400)
 
     user = User.query.filter_by(dropbox_id=dropbox_id).first()
     if user is None:
+        log.warn("Error activating, user with dropbox id {0} doesn't "
+                 "exist".format(dropbox_id))
         abort(400)
 
     if not user.active:
         if 'kindle_names' not in request.form:
+            log.warn("Error activating, user with dropbox id {0} submitted "
+                     "invalid kindle names".format(dropbox_id))
             abort(400)
 
         # Add all the Kindle usernames.
@@ -146,9 +154,13 @@ def activate():
         try:
             kindle_names = json.loads(form_kindle_names)
         except json.JSONDecodeError:
+            log.warn("Error activating, user with dropbox id {0} submitted "
+                     "invalid kindle names".format(dropbox_id))
             abort(400)
 
         if type(kindle_names) != list:
+            log.warn("Error activating, user with dropbox id {0} submitted "
+                     "invalid kindle names".format(dropbox_id))
             abort(400)
 
         for kindle_name in kindle_names:
@@ -161,6 +173,8 @@ def activate():
         db.session.flush()
         # TODO: Return an error to the client
         if user.kindle_names.first() is None:
+            log.warn("Error activating, user with dropbox id {0} submitted "
+                     "invalid kindle names".format(dropbox_id))
             abort(400)
 
         user.set_active(True)
