@@ -31,7 +31,8 @@ function stripeResponseHandler(status, response) {
 
   if (response.error) {
     // Show the errors on the form
-    $form.find('.payment-errors').text(response.error.message);
+    $form.find('.payment-errors').text(response.error.message)
+                                 .css('visibility', 'visible');
     $form.find('button').prop('disabled', false);
   } else {
     // response contains id and card, which contains additional card details
@@ -41,7 +42,8 @@ function stripeResponseHandler(status, response) {
 
     var $email = $form.find('[name="emailAddress"]');
     if (!$email.val()) {
-      $form.find('.payment-errors').text('Enter an email for a receipt.');
+      $form.find('.payment-errors').text('Enter an email for a receipt.')
+                                   .css('visibility', 'visible');
       $form.find('button').prop('disabled', false);
       return;
     }
@@ -53,7 +55,8 @@ function stripeResponseHandler(status, response) {
     }
     var amount = parseFloat(amount_string);
     if (!(amount > 0)) {
-      $form.find('.payment-errors').text('Oops, you must donate a positive amount!');
+      $form.find('.payment-errors').text('Oops, you must donate a positive amount!')
+                                   .css('visibility', 'visible');
       $form.find('button').prop('disabled', false);
       return;
     }
@@ -65,7 +68,8 @@ function stripeResponseHandler(status, response) {
           "You're awesome :) " +
           "You should receive an email shortly with a receipt.");
       } else {
-        $form.find('.payment-errors').text(data.message);
+        $form.find('.payment-errors').text(data.message)
+                                     .css('visibility', 'visible');
         $form.find('button').prop('disabled', false);
       }
     });

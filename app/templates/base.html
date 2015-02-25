@@ -57,6 +57,11 @@
         </div>
       </a>
     </div>
+
+    <div id="content" class="container col-md-offset-3 col-md-6">
+        {% block body %}{% endblock %}
+    </div>
+
     <div class="modal fade" id="donations-modal" tabindex="-1" role="dialog" aria-labelledby="donations-modal" aria-hidden="true">
       <div class="modal-dialog">
         <div class="modal-content">
@@ -116,15 +121,11 @@
               <span class="pull-right stripe-message">
                 Secure payments through <a href="https://stripe.com/">Stripe</a>
               </span>
-              <span class="payment-errors"></span>
+              <span class="payment-errors">Errors</span>
             </form>
           </div>
         </div>
       </div>
-    </div>
-
-    <div id="content" class="container col-md-offset-3 col-md-6">
-        {% block body %}{% endblock %}
     </div>
 
 

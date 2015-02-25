@@ -189,6 +189,7 @@ body {
   color: #F28C00;
   float: left;
   width: 60%;
+  visibility: hidden;
 }
 
 .btn {
