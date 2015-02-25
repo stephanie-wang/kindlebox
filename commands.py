@@ -58,3 +58,19 @@ class ResetUserCommand(Command):
         user.cursor = None
         user.books.delete()
         db.session.commit()
+
+
+class StatsCommand(Command):
+    """
+    Get some stats on number of users, books, etc.
+    """
+    def run(self):
+        active_user_count = User.query.filter_by(active=True).count()
+        total_user_count = User.query.count()
+        print ("{num_active} active users out of {num_total} "
+               "total".format(num_active=active_user_count, num_total=total_user_count))
+
+        unsent_book_count = Book.query.filter_by(unsent=True).count()
+        total_book_count = Book.query.count()
+        print ("{num_unsent} unsent books out of {num_total} "
+               "total".format(num_unsent=unsent_book_count, num_total=total_book_count))
