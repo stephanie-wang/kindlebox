@@ -179,7 +179,7 @@ def kindlebox(dropbox_id):
     # Only process Dropbox changes for active users.
     user = User.query.filter_by(dropbox_id=dropbox_id, active=True).first()
     if user is None:
-        lock.release()
+        kindlebox_lock.release()
         return
 
     log.info("Processing dropbox webhook for user id {0}".format(user.id))
