@@ -104,6 +104,21 @@ def upload_welcome_pdf(dropbox_id):
     return True
 
 
+def _acquire_lock(method_name, dropbox_id, blocking=True):
+    # Lock per user.
+    lock_id = '{0}-lock-{1}'.format(method_name, dropbox_id)
+    lock = redis.lock(lock_id, timeout=LOCK_EXPIRE)
+
+    # If non-blocking and unable to acquire lock, discard the task and hope
+    # that another worker finishes it.
+    if not lock.acquire(blocking=blocking):
+        log.debug("Couldn't acquire lock {0}.".format(lock_id))
+        return None
+
+    log.debug("Lock {0} acquired.".format(lock_id))
+    return lock
+
+
 def _kindlebox(dropbox_id, user, client):
     """
     The main body of a `kindlebox` task. Processes a single Dropbox delta for
@@ -116,9 +131,8 @@ def _kindlebox(dropbox_id, user, client):
 
     # Process delta to get added and removed books. Also download any newly
     # added books and get the hashes.
-    # `added_books` is a named tuple of ['pathname', 'book_hash', 'size'].
-    added_books = get_added_books(delta['entries'], client, user.id)
-    removed_books = get_removed_books(delta['entries'])
+    added_books = get_added_books(delta['entries'], user.id, client)
+    removed_books = get_removed_books(delta['entries'], user.id)
     log.debug("Delta contains {0} added books, {1} removed "
               "books".format(len(added_books), len(removed_books)))
 
@@ -131,40 +145,18 @@ def _kindlebox(dropbox_id, user, client):
 
     # Remove deleted books before adding new ones to avoid deleting files where
     # only the content has changed.
-    remove_books(user.id, removed_books)
+    for book in removed_books:
+        db.session.delete(book)
 
-    # Email ze books.
-    # Add all books that were supposed to be emailed. If email was
-    # unsuccessful, mark book as unsent.
-    email_from = user.emailer
-    email_to = get_to_emails(user)
-    attachments = []
-    attachment_size = 0
-    for book in added_books:
-        # If the next book added will put us over the attachment size limit or
-        # if we've reached the maximum number of attachments, send this batch.
-        # NOTE: An individual book with size over the limit will still get sent
-        # using this code. We want to do this in case it actually is possible
-        # to send the file (who knows what sendgrid's limits are?).
-        if ((attachment_size + book.size > ATTACHMENTS_SIZE_LIMIT and len(attachments) > 0)
-                or len(attachments) == ATTACHMENTS_LIMIT):
-            email_attachments(email_from, email_to, attachments, user.id)
-            attachments = []
-            attachment_size = 0
-
-        attachments.append(book)
-        attachment_size += book.size
-
-    if len(attachments) > 0:
-        email_attachments(email_from, email_to, attachments, user.id)
+    # Send the first batch of books and queue the other batches.
+    db.session.flush()
+    if len(added_books) > 0:
+        send_books(user.id, min(book.id for book in added_books),
+                     downloaded=True)
 
     # Update the Dropbox delta cursor in database.
     user.cursor = delta['cursor']
-
-    # Clean up the temporary files.
-    if len(added_books) > 0:
-        clear_tmp_directory()
-
+    db.session.merge(user)
     db.session.commit()
 
     return False
@@ -173,21 +165,16 @@ def _kindlebox(dropbox_id, user, client):
 @celery.task(ignore_result=True)
 def kindlebox(dropbox_id):
     """
-    Atomic task that continually processes any Dropbox changes for the user
-    associated with the given dropbox ID until there are no more changes. This
-    includes sending new books and removing old ones.
+    Task that continually processes any Dropbox changes for the user associated
+    with the given dropbox ID until there are no more changes. Any books
+    removed from Dropbox are also deleted from the database. The first
+    `ATTACHMENTS_LIMIT` books out of the books added to Dropbox are sent. The
+    rest of the books are queued.
     """
-    # Lock per user.
-    lock_id = '{0}-lock-{1}'.format(kindlebox.__name__, dropbox_id)
-    lock = redis.lock(lock_id, timeout=LOCK_EXPIRE)
-
-    # If unable to acquire lock, discard the task and hope that another worker
-    # finishes (see note below).
-    if not lock.acquire(blocking=False):
-        log.debug("Couldn't acquire lock {0}.".format(lock_id))
+    kindlebox_lock = _acquire_lock(kindlebox.__name__, dropbox_id)
+    # Another worker is taking care of it, so I'm done.
+    if kindlebox_lock is None:
         return False
-
-    log.debug("Lock {0} acquired.".format(lock_id))
 
     # Only process Dropbox changes for active users.
     user = User.query.filter_by(dropbox_id=dropbox_id, active=True).first()
@@ -213,76 +200,106 @@ def kindlebox(dropbox_id):
                        "{0}.").format(user.id), exc_info=True)
             break
 
-    lock.release()
+    kindlebox_lock.release()
+
+
+def _send_books(user, books, downloaded):
+    """
+    Helper function for the `send_books` celery task. Download, if necessary,
+    and email all the given user's books. Mark each book as `unsent` or not in
+    the database.
+    """
+    client = DropboxClient(user.access_token)
+    email_from = user.emailer
+    email_to = get_to_emails(user)
+    attachments = []
+    attachment_size = 0
+    for book in books:
+        # If there's an error downloading or converting the book, don't try
+        # to send it.
+        if not downloaded:
+            dropbox_book_hash = download_book(client, book.pathname, user.id)
+            if dropbox_book_hash is None:
+                continue
+        error = convert_book(get_tmp_path(book.pathname), user.id)
+        if error:
+            log.error("Failed to ebook-convert {book} for user id {user_id}\n"
+                      "STDERR: {stderr}\n".format(book=book.pathname,
+                                                  user_id=user.id,
+                                                  stderr=error))
+            continue
+
+        # If the next book added will put us over the attachment size limit,
+        # send this batch.
+        # NOTE: An individual book with size over the limit will still get sent
+        # using this code. We want to do this in case it actually is possible
+        # to send the file (who knows what sendgrid's limits are?).
+        if (attachment_size + book.get_size() > ATTACHMENTS_SIZE_LIMIT and
+                len(attachments) > 0):
+            email_attachments(email_from, email_to, attachments, user.id)
+            attachments = []
+            attachment_size = 0
+
+        attachments.append(book)
+        attachment_size += book.get_size()
+
+    if len(attachments) > 0:
+        email_attachments(email_from, email_to, attachments, user.id)
 
 
 @celery.task(ignore_result=True)
-def resend_books(dropbox_id):
+def send_books(user_id, min_book_id=0, downloaded=False):
     """
-    Task to resend any books associated with the given dropbox ID that are
-    marked as `unsent`.
+    Task to send any books associated with the given user ID that are marked as
+    `unsent`. Sends a batch of at most `ATTACHMENTS_LIMIT` books, all with
+    Book.id greater than or equal to the given `min_book_id`. If `downloaded`
+    is false, also downloads the books from the Dropbox API. Files that need
+    conversion are converted before sending.
+
+    Before finishing, the task queues another `send_books` task for the next
+    batch of (distinct) books.
     """
-    # Lock per user.
-    lock_id = '{0}-lock-{1}'.format(resend_books.__name__, dropbox_id)
-    lock = redis.lock(lock_id, timeout=LOCK_EXPIRE)
-
-    # If unable to acquire lock, discard the task.
-    if not lock.acquire(blocking=False):
-        log.debug("Couldn't acquire lock {0}.".format(lock_id))
-        return False
-
-    log.debug("Lock {0} acquired.".format(lock_id))
-
-    # Only resend books for active users.
-    user = User.query.filter_by(dropbox_id=dropbox_id, active=True).first()
-    if user is None:
-        lock.release()
+    send_lock = _acquire_lock(send_books.__name__, user_id, blocking=True)
+    if send_lock is None:
         return
 
-    log.info("Processing book resend for user id {0}".format(user.id))
+    # Only resend books for active users.
+    user = User.query.filter_by(id=user_id, active=True).first()
+    if user is None:
+        return
 
-    # Set the books to have the upper attachment limit as their size to ensure
-    # that they send individually.
-    unsent_books = [BookTuple(pathname=book.pathname,
-                              book_hash=book.book_hash,
-                              size=ATTACHMENTS_SIZE_LIMIT)
-                    for book in user.books.filter_by(unsent=True).all()]
+    log.info("Processing book resend for user id {0}".format(user_id))
 
-    # Re-download all the books that failed to send before. Make sure the
+    unsent_books_query = (user.books.filter_by(unsent=True).order_by(Book.id))
+    unsent_books = (unsent_books_query.filter(Book.id >= min_book_id)
+                                      .limit(ATTACHMENTS_LIMIT).all())
+    if len(unsent_books) == 0:
+        send_lock.release()
+        return
+
+    # Re-download and convert books that failed to send before. Check that
     # hashes match.
-    client = DropboxClient(user.access_token)
     try:
-        for book in unsent_books:
-            dropbox_book_hash = download_book(client, book.pathname, user.id)
-            if dropbox_book_hash != book.book_hash:
-                log.warning("Downloaded book {book_path} doesn't match unsent book "
-                            "for user id {user_id}".format(book_path=book.pathname,
-                                                           user_id=user.id))
-
-        # Resend the books and clean up the temporary files.
-        if len(unsent_books) > 0:
-            email_attachments(user.emailer, get_to_emails(user), unsent_books, user.id)
-            clear_tmp_directory()
-
+        _send_books(user, unsent_books, downloaded)
+        clear_tmp_directory()
         db.session.commit()
     except:
-        log.error("Failed to resend books for user id {0}".format(user.id),
+        log.error("Failed to resend books for user id {0}".format(user_id),
                   exc_info=True)
+    finally:
+        # If there are any more books to send after this batch, requeue them.
+        next_unsent_book = unsent_books_query.filter(Book.id > unsent_books[-1].id).first()
+        if next_unsent_book > 0:
+            send_books.delay(user_id, next_unsent_book.id)
 
-    lock.release()
+        send_lock.release()
 
 
-def mimetypes_filter(path):
-    return mimetypes.guess_type(path)[0] in BOOK_MIMETYPES
-
-
-BookTuple = namedtuple('Book', ['pathname', 'book_hash', 'size'])
-def get_added_books(delta_entries, client, user_id):
+def get_added_books(delta_entries, user_id, client):
     """
-    Return a list of Book tuples of the form ['pathname', 'book_hash', 'size'].
-    All books in this list have the correct mimetype, are under the size limit,
-    and don't have a duplicate hash in the database (i.e. not a filepath
-    rename).
+    Return a list of Books. All books in this list have the correct mimetype,
+    are under the size limit, and don't have a duplicate hash in the database
+    (i.e. not a filepath rename).
     """
     added_entries = []
     for entry in delta_entries:
@@ -298,19 +315,21 @@ def get_added_books(delta_entries, client, user_id):
                 metadata['bytes'] > AMAZON_SIZE_LIMIT):
             continue
 
-        book = BookTuple(pathname=pathname,
-                         book_hash=download_book(client, pathname, user_id),
-                         size=metadata['bytes'])
-
-        # Failed to download or convert file, so skip it and mark as unsent.
-        if book.book_hash is None:
-            add_book(user_id, book, True)
-            continue
+        book = Book(user_id,
+                    pathname,
+                    download_book(client, pathname, user_id),
+                    metadata['bytes'])
+        # NOTE: It's possible that the book failed to download here, in which
+        # case `book_hash` is None. We still add it to the database in case it
+        # can be downloaded later.
+        db.session.add(book)
 
         # Make sure that the book is not a duplicate of a previously added book
         # (probably a renamed file).
-        if (Book.query.filter_by(user_id=user_id)
-                      .filter_by(book_hash=book.book_hash).count() > 0):
+        duplicate = (Book.query.filter_by(user_id=user_id)
+                               .filter_by(book_hash=book.book_hash).first())
+        if (duplicate is not None):
+            book.unsent = duplicate.unsent
             continue
 
         added_entries.append(book)
@@ -318,13 +337,34 @@ def get_added_books(delta_entries, client, user_id):
     return added_entries
 
 
-def get_removed_books(delta_entries):
+def get_removed_books(delta_entries, user_id):
     """
-    Return a list of book paths that were deleted during this delta.
+    Return a list of Books whose paths were deleted during this delta.
     """
     removed_entries = [canonicalize(entry[0]) for entry in delta_entries if
                        entry[1] is None]
-    return [entry for entry in removed_entries if mimetypes_filter(entry)]
+    if len(removed_entries) > 0:
+        return (Book.query.filter_by(user_id=user_id)
+                          .filter(Book.pathname.in_(removed_entries)).all())
+    else:
+        return []
+
+
+def convert_book(tmp_path, user_id):
+    """
+    Attempt to convert any books of type in `CONVERTIBLE_MIMETYPES` to .mobi,
+    in the same folder as the given temporary path.
+    """
+    mobi_tmp_path = convert_to_mobi_path(tmp_path)
+    if mobi_tmp_path is None:
+        return None
+
+    log.info("Converting book for user id {0}".format(user_id))
+    p = subprocess.Popen(['ebook-convert', tmp_path, mobi_tmp_path],
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
+    _, stderr = p.communicate()
+    return stderr
 
 
 def download_book(client, book_path, user_id):
@@ -346,56 +386,22 @@ def download_book(client, book_path, user_id):
         log.error("Error creating directories for book {0}".format(book_path),
                   exc_info=True)
 
-    md5 = hashlib.md5()
-    with open(tmp_path, 'w') as tmp_book:
-        with client.get_file(book_path) as book:
-            data = book.read()
-            tmp_book.write(data)
-            md5.update(data)
+    try:
+        md5 = hashlib.md5()
+        with open(tmp_path, 'w') as tmp_book:
+            with client.get_file(book_path) as book:
+                data = book.read()
+                tmp_book.write(data)
+                md5.update(data)
 
-    # Attempt to convert any books of type in `CONVERTIBLE_MIMETYPES` to .mobi.
-    mobi_tmp_path = convert_to_mobi_path(tmp_path)
-    if mobi_tmp_path is not None:
-        log.info("Converting book for user id {0}".format(user_id))
-        p = subprocess.Popen(['ebook-convert', tmp_path, mobi_tmp_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = p.communicate()
-        if stderr:
-            log.error("Failed to ebook-convert {book} for user id {user_id}\n"
-                      "STDOUT: {stdout}\n"
-                      "STDERR: {stderr}\n".format(book=book_path,
-                                                  user_id=user_id,
-                                                  stdout=stdout,
-                                                  stderr=stderr))
-            return None
+        book_hash = md5.hexdigest()
 
-    book_hash = md5.hexdigest()
-
-    return book_hash
-
-
-def remove_books(user_id, removed_books):
-    """
-    Remove all the given book paths from the user associated with the given IDs
-    from the database.
-    """
-    for book_path in removed_books:
-        book = Book.query.filter_by(user_id=user_id).filter_by(pathname=book_path).first()
-        if book is not None:
-            db.session.delete(book)
-
-
-def add_book(user_id, book, unsent):
-    """
-    Add the given book (in the form of a BookTuple) and mark it as `unsent`.
-    """
-    book_row = Book.query.filter_by(user_id=user_id,
-                                    book_hash=book.book_hash,
-                                    pathname=book.pathname).first()
-    if book_row is None:
-        book_row = Book(user_id, book.pathname, book.book_hash, unsent=unsent)
-        db.session.add(book_row)
-
-    book_row.unsent = unsent
+        return book_hash
+    except:
+        log.error("Failed to download book {book_path} for user id "
+                  "{user_id}".format(book_path=book_path,
+                                     user_id=user_id), exc_info=True)
+        return None
 
 
 def email_attachments(email_from, email_to, attachments, user_id):
@@ -412,7 +418,7 @@ def email_attachments(email_from, email_to, attachments, user_id):
         # First try to batch email.
         _email_attachments(email_from, email_to, attachment_paths)
         for book in attachments:
-            add_book(user_id, book, False)
+            book.mark_unsent(False)
     except:
         log.error("Failed to send books for user id {0}".format(user_id),
                   exc_info=True)
@@ -421,11 +427,11 @@ def email_attachments(email_from, email_to, attachments, user_id):
         for book in attachments:
             try:
                 _email_attachments(email_from, email_to, get_attachment_paths([book.pathname]))
-                add_book(user_id, book, False)
+                book.mark_unsent(False)
             except:
                 log.error("Failed to resend book for user id {0}".format(user_id),
                           exc_info=True)
-                add_book(user_id, book, True)
+                book.mark_unsent(True)
 
 
 def _email_attachments(email_from, email_to, attachment_paths):
@@ -462,7 +468,7 @@ def clear_tmp_directory():
         _clear_directory(os.path.join(BASE_DIR, str(os.getpid())))
         os.rmdir(os.path.join(BASE_DIR, str(os.getpid())))
     except OSError:
-        log.error("Failed to clear tmp directory", exc_info=True)
+        log.debug("Failed to clear tmp directory", exc_info=True)
 
 
 def get_tmp_path(book_path):
@@ -490,6 +496,10 @@ def canonicalize(pathname):
 
 def get_to_emails(user):
     return [k.kindle_name + '@kindle.com' for k in user.kindle_names.all()]
+
+
+def mimetypes_filter(path):
+    return mimetypes.guess_type(path)[0] in BOOK_MIMETYPES
 
 
 class KindleboxException(Exception):

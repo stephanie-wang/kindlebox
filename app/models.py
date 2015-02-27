@@ -48,14 +48,26 @@ class Book(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     book_hash = db.Column(db.Text)
     pathname = db.Column(db.Text)
+    size = db.Column(db.Integer)
     unsent = db.Column(db.Boolean)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
-    def __init__(self, user_id, pathname, book_hash, unsent=False):
+    def __init__(self, user_id, pathname, book_hash, size, unsent=False):
         self.user_id = user_id
         self.pathname = pathname
         self.book_hash = book_hash
+        self.size = size
+        # Books are always unsent at first
+        self.mark_unsent(True)
+
+    def mark_unsent(self, unsent):
         self.unsent = unsent
+
+    def get_size(self):
+        if self.size is None:
+            return 0
+        else:
+            return self.size
 
 
 class KindleName(db.Model):

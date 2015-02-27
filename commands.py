@@ -1,6 +1,6 @@
 from app import db
 from app.kindleboxer import kindlebox
-from app.kindleboxer import resend_books
+from app.kindleboxer import send_books
 from app.models import User
 from app.models import Book
 
@@ -18,10 +18,10 @@ class CeleryTasksCommand(Command):
                    dest='no_kindlebox',
                    action='store_true',
                    help="Don't run the kindlebox task"),
-            Option('--no-resend-books',
+            Option('--no-send-books',
                    dest='no_resend_books',
                    action='store_true',
-                   help="Don't run the resend books task"),
+                   help="Don't run the send books task"),
             )
     def run(self, no_kindlebox, no_resend_books):
         if not no_kindlebox:
@@ -35,9 +35,9 @@ class CeleryTasksCommand(Command):
             # Resending any unsent books.
             unsent_books = Book.query.filter_by(unsent=True).all()
             print "Resending {0} unsent books...".format(len(unsent_books))
-            unsent_dropbox_ids = set(book.user.dropbox_id for book in unsent_books)
-            for dropbox_id in unsent_dropbox_ids:
-                resend_books.delay(dropbox_id)
+            unsent_ids = set(book.user.id for book in unsent_books)
+            for user_id in unsent_ids:
+                send_books.delay(user_id)
 
 
 class ResetUserCommand(Command):
