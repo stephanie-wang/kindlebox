@@ -443,7 +443,7 @@ def _email_attachments(email_from, email_to, attachment_paths):
 
 def convert_to_mobi_path(path):
     if mimetypes.guess_type(path)[0] in CONVERTIBLE_MIMETYPES:
-        stripped_path = os.path.splitext(path)[0]
+        stripped_path = os.path.splitext(path)[0].encode('ascii', 'ignore')
         return '{path}.mobi'.format(path=stripped_path)
 
 
