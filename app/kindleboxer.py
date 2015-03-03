@@ -34,6 +34,11 @@ ATTACHMENTS_LIMIT = 25
 ATTACHMENTS_SIZE_LIMIT = 25 * (10**6)
 AMAZON_SIZE_LIMIT = 50 * (10**6)
 
+# Try to send a file this many times before giving up. Sending a file means
+# successful Dropbox download, file conversion, and correct response from
+# SendGrid or Mailgun.
+MAX_SEND_ATTEMPTS = 10
+
 # Supported filetypes.
 # According to:
 # http://www.amazon.com/gp/help/customer/display.html?nodeId=200375630
@@ -217,10 +222,11 @@ def _send_books(user, books, downloaded):
     for book in books:
         # If there's an error downloading or converting the book, don't try
         # to send it.
+        book_hash = book.book_hash
         if not downloaded:
-            dropbox_book_hash = download_book(client, book.pathname, user.id)
-            if dropbox_book_hash is None:
-                continue
+            book_hash = download_book(client, book.pathname, user.id)
+        if book_hash is None:
+            continue
         error = convert_book(get_tmp_path(book.pathname), user.id)
         if error:
             log.error("Failed to ebook-convert {book} for user id {user_id}\n"
@@ -270,7 +276,11 @@ def send_books(user_id, min_book_id=0, downloaded=False):
 
     log.info("Processing book resend for user id {0}".format(user_id))
 
-    unsent_books_query = (user.books.filter_by(unsent=True).order_by(Book.id))
+    # Get the next batch of books that haven't been sent yet and are still
+    # under the maximum number of send attempts.
+    unsent_books_query = (user.books.filter_by(unsent=True)
+                                    .filter(Book.num_attempts < MAX_SEND_ATTEMPTS)
+                                    .order_by(Book.id))
     unsent_books = (unsent_books_query.filter(Book.id >= min_book_id)
                                       .limit(ATTACHMENTS_LIMIT).all())
     if len(unsent_books) == 0:
@@ -281,6 +291,8 @@ def send_books(user_id, min_book_id=0, downloaded=False):
     # hashes match.
     try:
         _send_books(user, unsent_books, downloaded)
+        for book in unsent_books:
+            book.num_attempts += 1
         clear_tmp_directory()
         db.session.commit()
     except:

@@ -50,6 +50,7 @@ class Book(db.Model):
     pathname = db.Column(db.Text)
     size = db.Column(db.Integer)
     unsent = db.Column(db.Boolean)
+    num_attempts = db.Column(db.Integer)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
     def __init__(self, user_id, pathname, book_hash, size, unsent=False):
@@ -59,6 +60,7 @@ class Book(db.Model):
         self.size = size
         # Books are always unsent at first
         self.mark_unsent(True)
+        self.num_attempts = 0
 
     def mark_unsent(self, unsent):
         self.unsent = unsent
