@@ -7,6 +7,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     dropbox_id = db.Column(db.Integer)
     name = db.Column(db.String(80))
+    email = db.Column(db.String(120))
     emailer = db.Column(db.String(120), unique=True)
     added_bookmarklet = db.Column(db.Boolean)
     uploaded_welcome_pdf = db.Column(db.Boolean)

@@ -249,7 +249,7 @@ def dropbox_auth_finish():
         db.session.add(user)
 
     user.access_token = access_token
-    user.name = get_dropbox_name(access_token)
+    (user.name, user.email) = get_dropbox_name_email(access_token)
     db.session.commit()
 
     if new_user:
@@ -351,10 +351,10 @@ def get_auth_flow():
                              session, 'dropbox-auth-csrf-token')
 
 
-def get_dropbox_name(access_token):
+def get_dropbox_name_email(access_token):
     client = DropboxClient(access_token)
     meta = client.account_info()
-    return meta.get('display_name', '').split(' ')[0]
+    return (meta.get('display_name', '').split(' ')[0], meta.get('email'))
 
 
 def get_logged_in_info():

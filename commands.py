@@ -1,11 +1,12 @@
+from dropbox.client import DropboxClient
+from flask.ext.script import Command
+from flask.ext.script import Option
+
 from app import db
 from app.kindleboxer import kindlebox
 from app.kindleboxer import send_books
 from app.models import User
 from app.models import Book
-
-from flask.ext.script import Command
-from flask.ext.script import Option
 
 
 class CeleryTasksCommand(Command):
@@ -74,3 +75,21 @@ class StatsCommand(Command):
         total_book_count = Book.query.count()
         print ("{num_unsent} unsent books out of {num_total} "
                "total".format(num_unsent=unsent_book_count, num_total=total_book_count))
+
+
+class SeedEmailsCommand(Command):
+    """
+    Fill in all Dropbox emails.
+    """
+    def run(self):
+        users = User.query.all()
+        for user in users:
+            if user.email is not None:
+                continue
+            client = DropboxClient(user.access_token)
+            try:
+                info = client.account_info()
+            except:
+                continue
+            user.email = info.get('email')
+        db.session.commit()
