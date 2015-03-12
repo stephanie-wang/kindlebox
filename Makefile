@@ -14,7 +14,7 @@ pull:
 
 	sudo service celeryd stop
 	# Clean up any temporary files from the celery workers
-	sudo rm -r /tmp/kindlebox/*
+	-sudo rm -r /tmp/kindlebox/*
 	@echo "\nRunning any migrations..."
 	./run.py db upgrade
 	sudo service celeryd start

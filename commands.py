@@ -92,4 +92,5 @@ class SeedEmailsCommand(Command):
             except:
                 continue
             user.email = info.get('email')
+            print user.id, user.email
         db.session.commit()
