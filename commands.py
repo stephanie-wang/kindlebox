@@ -99,7 +99,8 @@ class SeedEmailsCommand(Command):
 
 class SendRenameEmailsCommand(Command):
     def run(self):
-        emails = [row[0] for row in db.session.query(User.email).all()]
+        emails = [row[0] for row in db.session.query(User.email).filter_by(active=True).all()]
         with open('app/static/html/bookdrop_rename_email.html') as f:
             html = f.read()
-            emailer.send_mail('mail@mail.kindlebox.me', ['mail@mail.kindlebox.me'], subject='Kindlebox is now BookDrop', html=html, bcc=emails)
+            for email in emails:
+                emailer.send_mail('mail@mail.kindlebox.me', ['mail@mail.kindlebox.me'], subject='Kindlebox is now BookDrop', html=html, bcc=[email])
