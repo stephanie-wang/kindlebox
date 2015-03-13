@@ -8,7 +8,7 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Kindlebox</title>
+    <title>BookDrop</title>
 
     <!-- Bootstrap core CSS -->
     <link href="static/css/lib/bootstrap.min.css" rel="stylesheet">
@@ -31,7 +31,7 @@
           <a id="logo" class="navbar-brand" href="{{ url_for('home') }}">
             <img id="logo-icon" src="static/img/icon128.png" />
             <span id="logo-text">
-              Kindlebox
+             BookDrop
             </span>
           </a>
         </div>
@@ -67,11 +67,11 @@
         <div class="modal-content">
           <div class="modal-header">
             <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-            <h2>Support Kindlebox</h2>
+            <h2>Support BookDrop</h2>
           </div>
           <div class="modal-body">
-            Kindlebox needs your help to pay the bills. Every little bit helps
-            keep Kindlebox a free service for everyone!
+            BookDrop needs your help to pay the bills. Every little bit helps
+            keep BookDrop a free service for everyone!
             <form id="donations-form" action="/donate" method="POST">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
@@ -160,7 +160,7 @@
       addthis_share = {
         passthrough : {
           twitter: {
-            text: "Check out Kindlebox, and receive books on your Kindle through Dropbox!"
+            text: "Check out BookDrop, and receive books on your Kindle through Dropbox!"
           }
         }
       };

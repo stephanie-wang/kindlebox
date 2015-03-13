@@ -84,7 +84,7 @@ function addModal(kindleboxCsrfToken, appUrl, emailer) {
       '    <div class="modal-content">' +
       '      <div class="modal-header">' +
       '      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>' +
-      '      <h2>Kindlebox</h2>' +
+      '      <h2>BookDrop</h2>' +
       '      </div>' +
       '      <div class="modal-body">' +
       '        <b id="kindlebox-devices-label">Select your Kindle device(s)!</b>' +
@@ -99,7 +99,7 @@ function addModal(kindleboxCsrfToken, appUrl, emailer) {
       '        <div id="kindlebox-error" class="pull-left">' +
       '          <b>Oops, no devices were selected! Try again :)</b>' +
       '        </div>' +
-      '        <button id="activate-kindlebox-btn" type="button" class="btn btn-primary">Activate Kindlebox</button>' +
+      '        <button id="activate-kindlebox-btn" type="button" class="btn btn-primary">Activate BookDrop</button>' +
       '    </div>' +
       '  </div>' +
       '  </div>' +
@@ -108,7 +108,7 @@ function addModal(kindleboxCsrfToken, appUrl, emailer) {
   $modalHtml.find('#kindlebox-error').hide();
 
   // Handler for submitting the picker form.
-  function activateKindlebox() {
+  function activateBookDrop() {
     var devices = $.makeArray($("#" + KINDLEBOX_FORM_ID).find(".kindlebox-device-checkbox:checked"));
     if (devices.length == 0) {
       $('#kindlebox-error').clearQueue().fadeIn().delay(3000).fadeOut();
@@ -122,14 +122,14 @@ function addModal(kindleboxCsrfToken, appUrl, emailer) {
   }
   $modalHtml.find("#activate-kindlebox-btn").click(function() {
     //analytics.track('Clicked activate button');
-    whitelistEmailer(emailer, activateKindlebox);
+    whitelistEmailer(emailer, activateBookDrop);
   });
 
-  // Add a checkbox for each device eligible for Kindlebox.
+  // Add a checkbox for each device eligible for BookDrop.
   var devices = getDevices();
   if (devices.length == 0) {
     $modalHtml.find('.modal-body').text('Oops, it seems you don\'t have any \
-        devices eligible for Kindlebox! Make sure to register a \
+        devices eligible for BookDrop! Make sure to register a \
         Kindle with this Amazon account before trying again :)')
     $modalHtml.find('#activate-kindlebox-btn').attr('disabled', 'disabled');
   } else {

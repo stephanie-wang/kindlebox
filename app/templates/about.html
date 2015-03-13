@@ -5,34 +5,34 @@
 {% endblock %}
 
 {% block body %}
-<h2>About Kindlebox</h2>
+<h2>About BookDrop</h2>
 <ul id="faq">
 
   <li class="faq-li">
     <b>
-      What is Kindlebox?
+      What is BookDrop?
     </b>
     <p>
-      Kindlebox is an easy way to transfer books to your Kindle using a Dropbox
+      BookDrop is an easy way to transfer books to your Kindle using a Dropbox
       folder.
     </p>
   </li>
 
   <li class="faq-li">
     <b>
-      How do I use Kindlebox?
+      How do I use BookDrop?
     </b>
     <p>
       It's simple! Just <a href="{{ url_for('home') }}?redirect=true">register
       here</a>, and start adding books to your
-      <code>Dropbox/Apps/kindle-box</code> folder. Any new books you add will
+      <code>Dropbox/Apps/book-drop</code> folder. Any new books you add will
       get sent to your Kindle.
     </p>
   </li>
 
   <li class="faq-li">
     <b>
-      Can I use Kindlebox to share books with friends?
+      Can I use BookDrop to share books with friends?
     </b>
     <p>
       Yup, just follow these steps:
@@ -41,7 +41,7 @@
         <li>Go to the <a href="https://www.dropbox.com/">Dropbox website</a>,
         and share the folder with a friend.</li>
         <li>Using a file manager like "Finder" on Mac OS, create a shortcut to
-        the shared folder inside <code>Dropbox/Apps/kindle-box</code>.</li>
+        the shared folder inside <code>Dropbox/Apps/book-drop</code>.</li>
         <li>Have your friend create a similar shortcut to their copy of the
         shared folder. Now you'll both receive any books that get added to the
         folder!</li>
@@ -50,21 +50,21 @@
   </li>
 
   <li class="faq-li">
-    <b>What kind of reading devices can I use Kindlebox with?</b>
+    <b>What kind of reading devices can I use BookDrop with?</b>
     <p>
-    You can use Kindlebox with any Kindle e-reader or mobile app.
+    You can use BookDrop with any Kindle e-reader or mobile app.
     </p>
   </li>
 
   <li class="faq-li">
     <b>
-      What kind of files can I send using Kindlebox?
+      What kind of files can I send using BookDrop?
     </b>
     <p>
       You can send any files supported by <a
           href="http://www.amazon.com/gp/help/customer/display.html?nodeId=200767340">Amazon</a>. 
-      Kindlebox also supports any <b>.epub</b>, <b>.cbr</b>, and <b>.cbz</b>
-      files, which Kindlebox will convert to a Kindle-supported format (the
+      BookDrop also supports any <b>.epub</b>, <b>.cbr</b>, and <b>.cbz</b>
+      files, which BookDrop will convert to a Kindle-supported format (the
       quality of these conversions may vary from file to file).  In total,
       these are:
       <ul>
@@ -76,14 +76,14 @@
     <p>
     </p>
       If there's a file format that you don't see here, <a
-      href="mailto:swang93@mit.edu?subject=Kindlebox issue user ID {{ user_id }}">
+      href="mailto:swang93@mit.edu?subject=BookDrop issue user ID {{ user_id }}">
       send us an email</a>, and we'll see what we can do!
     </p>
   </li>
 
   <li class="faq-li">
     <b>
-        Help! I've added books to my Kindlebox folder, but I haven't received
+        Help! I've added books to my BookDrop folder, but I haven't received
         them on my Kindle for some reason.
     </b>
     <p>
@@ -93,18 +93,18 @@
     <p>
         If you still haven't received the file, make sure that it's of one of
         the supported filetypes listed above and below 25MB. Also, for legal
-        reasons, Kindlebox can't convert files under DRM.
+        reasons, BookDrop can't convert files under DRM.
     </p>
         If you've checked all of these things, try deleting the book from your
-        Kindlebox folder and readding it to notify Kindlebox again that you've
+        BookDrop folder and readding it to notify BookDrop again that you've
             added a file. If all else fails, <a
-                href="mailto:swang93@mit.edu?subject=Kindlebox issue user ID {{
+                href="mailto:swang93@mit.edu?subject=BookDrop issue user ID {{
                 user_id }}">send us an email</a> detailing what happened.
     </p>
   </li>
 
   <li class="faq-li">
-    <b>Can I delete books from my Kindle using Kindlebox?</b>
+    <b>Can I delete books from my Kindle using BookDrop?</b>
     <p>
     Unfortunately, no. We'll have to wait for a Kindle API :(
     </p>
@@ -113,23 +113,23 @@
   <li class="faq-li">
     <b>
       I have some books that I've already transferred to my Kindle. If I add
-      them to my Kindlebox folder, will they get added to my Kindle again?
+      them to my BookDrop folder, will they get added to my Kindle again?
     </b>
     <p>
-      Unfortunately, yes. This is because Kindlebox has no way of knowing what
+      Unfortunately, yes. This is because BookDrop has no way of knowing what
       files are already on your Kindle.
     </p>
     <p>
-      There is a way around this, though.  Kindlebox will only send files of a
+      There is a way around this, though.  BookDrop will only send files of a
       certain type, so if you rename a file with an unsupported file extension
       (e.g. ".kbox"), it won't get sent to your Kindle. Make sure to do this
-      <i>before</i> you add the file to your Kindlebox folder.
+      <i>before</i> you add the file to your BookDrop folder.
     </p>
   </li>
 
   <li class="faq-li">
     <b>
-      Can I register for Kindlebox on mobile?
+      Can I register for BookDrop on mobile?
     </b>
     <p>
       Nope :( Perhaps in a galaxy far far away...
@@ -148,19 +148,19 @@
   </li>
 
   <li id="faq-first" class="faq-li">
-    <b>How does Kindlebox work under the hood?</b>
+    <b>How does BookDrop work under the hood?</b>
     <p>
-      Kindlebox works on top of Amazon's existing
+      BookDrop works on top of Amazon's existing
       <a href="http://www.amazon.com/gp/help/customer/display.html/?nodeId=200767340">Kindle Personal Documents Service</a>. Through
       this service, you can give certain email addresses permission to send
       documents to your Kindle, free of charge. Your Kindle can then download
       these documents wirelessly.
     </p>
     <p>
-      Whenever you add a book to <code>Dropbox/Apps/kindle-box</code>, Kindlebox
+      Whenever you add a book to <code>Dropbox/Apps/book-drop</code>, BookDrop
       is notified by the
       <a href="https://www.dropbox.com/developers/webhooks">Dropbox webhooks service</a>.
-      Kindlebox then downloads the book through the
+      BookDrop then downloads the book through the
       <a href="https://www.dropbox.com/developers/core">Dropbox Core API</a>
       and emails it to your Kindle.
     </p>
@@ -168,38 +168,38 @@
 
   <li class="faq-li">
     <b>
-      What does the "Activate Kindlebox" bookmarklet do? Should I be worried
+      What does the "Activate BookDrop" bookmarklet do? Should I be worried
       about running this JavaScript in my browser?
     </b>
     <p>
       The bookmarklet does a couple things. First, it scrapes the Amazon
       <a href="https://www.amazon.com/mn/dcw/myx.html">Manage Your Content and Devices</a>
-      page for possible Kindlebox devices and displays them in a modal for you to
+      page for possible BookDrop devices and displays them in a modal for you to
       pick from. Second, the bookmarklet sends a request to Amazon to allow a
-      Kindlebox email address to send your Kindle devices personal documents. If
-      all goes well, the bookmarklet notifies Kindlebox that your account is all
+      BookDrop email address to send your Kindle devices personal documents. If
+      all goes well, the bookmarklet notifies BookDrop that your account is all
       set.
     </p>
   </li>
 
   <li class="faq-li">
     <b>
-      Where can I find the source code for Kindlebox?
+      Where can I find the source code for BookDrop?
     </b>
     <p>
-      <a href="https://github.com/stephanie-wang/kindlebox">Here on GitHub</a>.
+      <a href="https://github.com/stephanie-wang/BookDrop">Here on GitHub</a>.
     </p>
   </li>
 
   <li class="faq-li">
     <b>
-      I'm having a problem using Kindlebox. Whom can I contact?
+      I'm having a problem using BookDrop. Whom can I contact?
     </b>
     <p>
-    <a href="mailto:swang93@mit.edu?subject=Kindlebox issue user ID {{ user_id }}">Send us an email</a>! If you
+    <a href="mailto:swang93@mit.edu?subject=BookDrop issue user ID {{ user_id }}">Send us an email</a>! If you
     think you've found a bug or would like to see a new feature, feel free to
-    also <a href="https://github.com/stephanie-wang/kindlebox/issues">add an
-    issue</a> on the Kindlebox GitHub page.
+    also <a href="https://github.com/stephanie-wang/BookDrop/issues">add an
+    issue</a> on the BookDrop GitHub page.
     </p>
   </li>
 
@@ -211,7 +211,7 @@
       From <a href="http://thenounproject.com">the Noun Project</a>! "<a href="http://thenounproject.com/term/dropbox-folder/24249/">Dropbox Folder</a>" is by Agus Purwanto and "<a href="http://thenounproject.com/term/ebook/54054/">Ebook</a>" is by Antonio Aversa.
     </p>
     <p>
-        Also, the beautiful background image on all the Kindlebox pages is from <a href="http://subtlepatterns.com">subtlepatterns.com</a>.
+        Also, the beautiful background image on all the BookDrop pages is from <a href="http://subtlepatterns.com">subtlepatterns.com</a>.
     </p>
   </li>
 

@@ -138,12 +138,12 @@ var EmailerInstructions = React.createClass({
         "}" +
         "var sources = [" +
           "\"https://fonts.googleapis.com/css?family=Arvo\"," +
-          "\"https://kindlebox.me/static/css/lib/bootstrap.min.css\"," +
-          "\"https://kindlebox.me/static/css/lib/font-awesome.min.css\"," +
-          "\"https://kindlebox.me/static/css/bookmarklet.css\"," +
-          "\"https://kindlebox.me/static/js/lib/jquery-1.11.1.min.js\"," +
-          "\"https://kindlebox.me/static/js/lib/bootstrap.min.js\"," +
-          "\"https://kindlebox.me/static/js/bookmarklet.js\"" +
+          "\"https://getbookdrop.com/static/css/lib/bootstrap.min.css\"," +
+          "\"https://getbookdrop.com/static/css/lib/font-awesome.min.css\"," +
+          "\"https://getbookdrop.com/static/css/bookmarklet.css\"," +
+          "\"https://getbookdrop.com/static/js/lib/jquery-1.11.1.min.js\"," +
+          "\"https://getbookdrop.com/static/js/lib/bootstrap.min.js\"," +
+          "\"https://getbookdrop.com/static/js/bookmarklet.js\"" +
         "];" +
         "if (document.getElementsByClassName(\"kindlebox-source\").length == sources.length) {" +
           "sources = [];" +
@@ -197,7 +197,7 @@ var EmailerInstructions = React.createClass({
               <a id="bookmarklet" className="action" href={bookmarklet}
                   onMouseOver={this.showBookmarkletArrow}
                   onMouseLeave={this.hideBookmarkletArrow}>
-                Activate Kindlebox
+                Activate BookDrop
               </a>
               <img id="bookmarklet-arrow" ref="bookmarkletArrow" src="static/img/arrow.png" />
             </div>
@@ -248,14 +248,14 @@ var ActiveMessage = React.createClass({
         <div>
           <h2>Success! Read the PDF below for final instructions.</h2>
           <p className="tip">
-            Kindlebox is free for everyone, but it costs us to keep it that
-            way. <a ref="donateLink">Help us keep Kindlebox
+            BookDrop is free for everyone, but it costs us to keep it that
+            way. <a ref="donateLink">Help us keep BookDrop
             going</a>!
           </p>
-          <iframe id="pdf-reader" src="static/kindlebox_welcome.pdf#view=fit"></iframe>
+          <iframe id="pdf-reader" src="static/bookdrop_welcome.pdf#view=fit"></iframe>
           <p className="tip">
             If you'd like to update your Kindle devices, or stop using
-            Kindlebox completely, <a onClick={this.deactivateHandler}>click
+            BookDrop completely, <a onClick={this.deactivateHandler}>click
             here</a>.
           </p>
         </div>
