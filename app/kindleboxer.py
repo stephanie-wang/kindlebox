@@ -39,6 +39,16 @@ AMAZON_SIZE_LIMIT = 50 * (10**6)
 # SendGrid or Mailgun.
 MAX_SEND_ATTEMPTS = 10
 
+# Amazon doesn't support these formats, but BookDrop does!
+EPUB_MIMETYPE = 'application/epub+zip'
+AZW3_MIMETYPE = 'application/bookdrop-azw3'  # not a real mimetype, but we need to recognize it.
+CBR_MIMETYPE = 'application/x-cbr'
+CBZ_MIMETYPE = 'application/x-cbz'
+CONVERTIBLE_MIMETYPES = {EPUB_MIMETYPE,
+                         CBR_MIMETYPE,
+                         CBZ_MIMETYPE,
+                         AZW3_MIMETYPE}
+
 # Supported filetypes.
 # According to:
 # http://www.amazon.com/gp/help/customer/display.html?nodeId=200375630
@@ -46,15 +56,8 @@ mimetypes.add_type('application/x-mobipocket-ebook', '.mobi')
 mimetypes.add_type('application/x-mobipocket-ebook', '.prc')
 mimetypes.add_type('application/vnd.amazon.ebook', '.azw')
 mimetypes.add_type('application/vnd.amazon.ebook', '.azw1')
-
-# Amazon doesn't support these formats, but BookDrop does!
-EPUB_MIMETYPE = 'application/epub+zip'
-CBR_MIMETYPE = 'application/x-cbr'
-CBZ_MIMETYPE = 'application/x-cbz'
-CONVERTIBLE_MIMETYPES = {EPUB_MIMETYPE,
-                         CBR_MIMETYPE,
-                         CBZ_MIMETYPE}
 mimetypes.add_type(EPUB_MIMETYPE, '.epub')
+mimetypes.add_type(AZW3_MIMETYPE, '.azw3')
 
 BOOK_MIMETYPES = CONVERTIBLE_MIMETYPES.union({
     'application/vnd.amazon.ebook',
