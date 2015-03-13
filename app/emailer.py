@@ -11,16 +11,20 @@ SENDGRID_API_URL = 'https://api.sendgrid.com/api/mail.send.json'
 MAILGUN_API_URL = 'https://api.mailgun.net/v2/{0}/messages'.format(app.config.get('MAILGUN_DOMAIN'))
 
 
-def send_mail(send_from, send_to, files=None, use_mailgun=False):
+def send_mail(send_from, send_to, files=None, use_mailgun=False, subject='convert', html='convert', bcc=None):
+    if bcc is None:
+        bcc = []
     if files is None:
         files = []
     assert type(files)==list
 
     data = {
+             'fromname': 'Kindlebox',
              'from': send_from,
              'to[]': send_to,
-             'subject': 'convert',
-             'text': 'convert',
+             'subject': subject,
+             'html': html,
+             'bcc[]': bcc,
              }
 
     if not use_mailgun:

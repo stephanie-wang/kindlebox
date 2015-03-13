@@ -3,6 +3,7 @@ from flask.ext.script import Command
 from flask.ext.script import Option
 
 from app import db
+from app import emailer
 from app.kindleboxer import kindlebox
 from app.kindleboxer import send_books
 from app.models import User
@@ -94,3 +95,11 @@ class SeedEmailsCommand(Command):
             user.email = info.get('email')
             print user.id, user.email
         db.session.commit()
+
+
+class SendRenameEmailsCommand(Command):
+    def run(self):
+        emails = [row[0] for row in db.session.query(User.email).all()]
+        with open('app/static/html/bookdrop_rename_email.html') as f:
+            html = f.read()
+            emailer.send_mail('mail@mail.kindlebox.me', ['mail@mail.kindlebox.me'], subject='Kindlebox is now BookDrop', html=html, bcc=emails)
