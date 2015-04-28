@@ -296,7 +296,6 @@ def send_books(user_id, min_book_id=0, downloaded=False):
         _send_books(user, unsent_books, downloaded)
         for book in unsent_books:
             book.num_attempts += 1
-        clear_tmp_directory()
         db.session.commit()
     except:
         log.error("Failed to resend books for user id {0}".format(user_id),
@@ -307,6 +306,7 @@ def send_books(user_id, min_book_id=0, downloaded=False):
         if next_unsent_book > 0:
             send_books.delay(user_id, next_unsent_book.id)
 
+        clear_tmp_directory()
         send_lock.release()
 
 
