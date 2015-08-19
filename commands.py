@@ -15,7 +15,7 @@ class CeleryTasksCommand(Command):
     Sets off the `kindlebox` celery task for all active users, which resends
     any unsent books.
     """
-    def run(self, no_kindlebox, no_resend_books):
+    def run(self):
         # Kindleboxing active users.
         active_users = User.query.filter_by(active=True).all()
         print "Kindleboxing {0} active users...".format(len(active_users))
