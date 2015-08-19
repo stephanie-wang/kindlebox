@@ -21,12 +21,6 @@ log = logging.getLogger()
 # Lock expires in 30 minutes, in case there are lots of epubs to convert.
 LOCK_EXPIRE = 60 * 30
 
-BASE_DIR = '/tmp/kindlebox'
-try:
-    os.makedirs(BASE_DIR)
-except OSError:
-    pass
-
 # And can only email 25 books at a time. Sendgrid only allows 20MB at a time,
 # after encoding to email text, so more like 15. Mailgun is about 25MB?  And
 # can only email 25 books at a time.
@@ -139,6 +133,9 @@ def _kindlebox(dropbox_id, user, client):
 
     # Process delta to get added and removed books. Also download any newly
     # added books and get the hashes.
+    # NOTE: It's possible that the book failed to download here, in which case
+    # each book in `added_books` has `book_hash` None. We still add it to the
+    # database in case it can be downloaded later.
     added_books = get_added_books(delta['entries'], user.id, client)
     removed_books = get_removed_books(delta['entries'], user.id)
     log.debug("Delta contains {0} added books, {1} removed "
@@ -151,16 +148,11 @@ def _kindlebox(dropbox_id, user, client):
         db.session.commit()
         return True
 
-    # Remove deleted books before adding new ones to avoid deleting files where
-    # only the content has changed.
+    # Add and delete books from the database.
+    for book in added_books:
+        db.session.add(book)
     for book in removed_books:
         db.session.delete(book)
-
-    # Send the first batch of books and queue the other batches.
-    db.session.flush()
-    if len(added_books) > 0:
-        send_books(user.id, min(book.id for book in added_books),
-                     downloaded=True)
 
     # Update the Dropbox delta cursor in database.
     user.cursor = delta['cursor']
@@ -196,22 +188,23 @@ def kindlebox(dropbox_id):
     # webhook and two celery workers that would result in a delta getting
     # dropped, but hopefully this is better than cluttering the task queues.
     client = DropboxClient(user.access_token)
-    while True:
-        log.debug("Processing one kindlebox iteration for user id "
-                  "{0}".format(user.id))
-        try:
+    try:
+        while True:
+            log.debug("Processing one kindlebox iteration for user id "
+                      "{0}".format(user.id))
             done = _kindlebox(dropbox_id, user, client)
             if done:
                 break
-        except:
-            log.error(("Failed to process dropbox webhook for user id "
-                       "{0}.").format(user.id), exc_info=True)
-            break
+    except:
+        log.error(("Failed to process dropbox webhook for user id "
+                   "{0}.").format(user.id), exc_info=True)
+    finally:
+        # TODO: Only do this if there were actually books added.
+        send_books(user.id)
+        kindlebox_lock.release()
 
-    kindlebox_lock.release()
 
-
-def _send_books(user, books, downloaded):
+def _send_books(user, books):
     """
     Helper function for the `send_books` celery task. Download, if necessary,
     and email all the given user's books. Mark each book as `unsent` or not in
@@ -225,12 +218,11 @@ def _send_books(user, books, downloaded):
     for book in books:
         # If there's an error downloading or converting the book, don't try
         # to send it.
-        book_hash = book.book_hash
-        if not downloaded:
-            book_hash = download_book(client, book.pathname, user.id)
-        if book_hash is None:
+        if not book.is_downloaded():
+            download_book(client, book)
+        if book.book_hash is None:
             continue
-        error = convert_book(get_tmp_path(book.pathname), user.id)
+        error = convert_book(book)
         if error:
             log.error("Failed to ebook-convert {book} for user id {user_id}\n"
                       "STDERR: {stderr}\n".format(book=book.pathname,
@@ -257,13 +249,13 @@ def _send_books(user, books, downloaded):
 
 
 @celery.task(ignore_result=True)
-def send_books(user_id, min_book_id=0, downloaded=False):
+def send_books(user_id, min_book_id=0):
     """
     Task to send any books associated with the given user ID that are marked as
     `unsent`. Sends a batch of at most `ATTACHMENTS_LIMIT` books, all with
-    Book.id greater than or equal to the given `min_book_id`. If `downloaded`
-    is false, also downloads the books from the Dropbox API. Files that need
-    conversion are converted before sending.
+    Book.id greater than or equal to the given `min_book_id`. Books are
+    downloaded if necessary. Files that need conversion are converted before
+    sending.
 
     Before finishing, the task queues another `send_books` task for the next
     batch of (distinct) books.
@@ -293,7 +285,7 @@ def send_books(user_id, min_book_id=0, downloaded=False):
     # Re-download and convert books that failed to send before. Check that
     # hashes match.
     try:
-        _send_books(user, unsent_books, downloaded)
+        _send_books(user, unsent_books)
         for book in unsent_books:
             book.num_attempts += 1
         db.session.commit()
@@ -303,10 +295,10 @@ def send_books(user_id, min_book_id=0, downloaded=False):
     finally:
         # If there are any more books to send after this batch, requeue them.
         next_unsent_book = unsent_books_query.filter(Book.id > unsent_books[-1].id).first()
-        if next_unsent_book > 0:
+        if next_unsent_book is None:
+            clear_directory(user.get_directory())
+        else:
             send_books.delay(user_id, next_unsent_book.id)
-
-        clear_tmp_directory()
         send_lock.release()
 
 
@@ -332,12 +324,9 @@ def get_added_books(delta_entries, user_id, client):
 
         book = Book(user_id,
                     pathname,
-                    download_book(client, pathname, user_id),
                     metadata['bytes'])
-        # NOTE: It's possible that the book failed to download here, in which
-        # case `book_hash` is None. We still add it to the database in case it
-        # can be downloaded later.
-        db.session.add(book)
+
+        download_book(client, book)
 
         # Make sure that the book is not a duplicate of a previously added book
         # (probably a renamed file).
@@ -365,16 +354,17 @@ def get_removed_books(delta_entries, user_id):
         return []
 
 
-def convert_book(tmp_path, user_id):
+def convert_book(book):
     """
     Attempt to convert any books of type in `CONVERTIBLE_MIMETYPES` to .mobi,
     in the same folder as the given temporary path.
     """
+    tmp_path = book.get_tmp_pathname()
     mobi_tmp_path = convert_to_mobi_path(tmp_path)
     if mobi_tmp_path is None:
         return None
 
-    log.info("Converting book for user id {0}".format(user_id))
+    log.info("Converting book for user id {0}".format(book.user_id))
     p = subprocess.Popen(['ebook-convert', tmp_path, mobi_tmp_path],
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
@@ -382,40 +372,37 @@ def convert_book(tmp_path, user_id):
     return stderr
 
 
-def download_book(client, book_path, user_id):
+def download_book(client, book):
     """
-    Download the given book path, for the given user ID, from the Dropbox
-    client to a temporary path. Make all the directories in the given book path
-    at the temporary root folder if they don't already exist. If the book is an
-    epub, convert it to mobi.
+    Download the given book from the Dropbox client to a temporary path. Make
+    all the directories in the given book path at the temporary root folder if
+    they don't already exist.
 
-    Return the hash of the downloaded (and converted) file.
+    Set the book's hash of the downloaded file.
     """
     # Make all the necessary nested directories in the temporary directory.
-    tmp_path = get_tmp_path(book_path)
+    tmp_path = book.get_tmp_pathname()
     try:
         book_dir = os.path.dirname(tmp_path)
         if not os.path.exists(book_dir):
             os.makedirs(book_dir)
     except OSError:
-        log.error("Error creating directories for book {0}".format(book_path),
+        log.error("Error creating directories for book {0}".format(book.pathname),
                   exc_info=True)
 
     try:
         md5 = hashlib.md5()
         with open(tmp_path, 'w') as tmp_book:
-            with client.get_file(book_path) as book:
-                data = book.read()
+            with client.get_file(book.pathname) as book_file:
+                data = book_file.read()
                 tmp_book.write(data)
                 md5.update(data)
 
-        book_hash = md5.hexdigest()
-
-        return book_hash
+        book.book_hash = md5.hexdigest()
     except:
         log.error("Failed to download book {book_path} for user id "
-                  "{user_id}".format(book_path=book_path,
-                                     user_id=user_id), exc_info=True)
+                  "{user_id}".format(book_path=book.pathname,
+                                     user_id=book.user_id), exc_info=True)
         return None
 
 
@@ -426,7 +413,7 @@ def email_attachments(email_from, email_to, attachments, user_id):
     attachment, add the book to the user associated with the given ID and mark
     whether it was successfully emailed or not.
     """
-    attachment_paths = get_attachment_paths(book.pathname for book in attachments)
+    attachment_paths = get_attachment_paths(attachments)
     log.debug("Sending email to " + ' '.join(email_to) + " " + ' '.join(attachment_paths))
 
     try:
@@ -441,7 +428,7 @@ def email_attachments(email_from, email_to, attachments, user_id):
         # If fail to batch email, try sending individually instead.
         for book in attachments:
             try:
-                _email_attachments(email_from, email_to, get_attachment_paths([book.pathname]))
+                _email_attachments(email_from, email_to, get_attachment_paths([book]))
                 book.mark_unsent(False)
             except:
                 log.error("Failed to resend book for user id {0}".format(user_id),
@@ -462,38 +449,26 @@ def convert_to_mobi_path(path):
         return '{path}.mobi'.format(path=stripped_path)
 
 
-def _clear_directory(directory):
+def clear_directory(directory):
     """
     Remove all possible directories and files from a given directory.
     """
-    for path in os.listdir(directory):
-        subdirectory = os.path.join(directory, path)
-        if os.path.isdir(subdirectory):
-            _clear_directory(subdirectory)
-            os.rmdir(subdirectory)
-        else:
-            os.unlink(subdirectory)
-
-
-def clear_tmp_directory():
-    """
-    Remove all possible directories and files from the temporary directory.
-    """
     try:
-        _clear_directory(os.path.join(BASE_DIR, str(os.getpid())))
-        os.rmdir(os.path.join(BASE_DIR, str(os.getpid())))
+        for path in os.listdir(directory):
+            subdirectory = os.path.join(directory, path)
+            if os.path.isdir(subdirectory):
+                clear_directory(subdirectory)
+            else:
+                os.unlink(subdirectory)
+        os.rmdir(directory)
     except OSError:
         log.debug("Failed to clear tmp directory", exc_info=True)
 
 
-def get_tmp_path(book_path):
-    return os.path.join(BASE_DIR, str(os.getpid()), book_path.strip('/'))
-
-
-def get_attachment_paths(book_paths):
+def get_attachment_paths(books):
     attachment_paths = []
-    for book_path in book_paths:
-        tmp_path = get_tmp_path(book_path)
+    for book in books:
+        tmp_path = book.get_tmp_pathname()
 
         # If this book got converted, get the .mobi path instead.
         mobi_tmp_path = convert_to_mobi_path(tmp_path)

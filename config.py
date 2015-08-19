@@ -51,3 +51,9 @@ elif PROD:
         from prod_config import *
     except ImportError:
         pass
+
+BASE_DIR = '/tmp/kindlebox'
+try:
+    os.makedirs(BASE_DIR)
+except OSError:
+    pass

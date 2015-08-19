@@ -1,4 +1,7 @@
+import os
+
 from app import db
+from app import app
 from app.utils import get_random_string
 
 
@@ -43,6 +46,9 @@ class User(db.Model):
     def set_uploaded_welcome_pdf(self):
         self.uploaded_welcome_pdf = True
 
+    def get_directory(self):
+        return _get_user_directory(self.id)
+
 
 class Book(db.Model):
     __tablename__ = 'book'
@@ -54,7 +60,7 @@ class Book(db.Model):
     num_attempts = db.Column(db.Integer)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
-    def __init__(self, user_id, pathname, book_hash, size, unsent=False):
+    def __init__(self, user_id, pathname, size, unsent=False, book_hash=''):
         self.user_id = user_id
         self.pathname = pathname
         self.book_hash = book_hash
@@ -72,6 +78,13 @@ class Book(db.Model):
         else:
             return self.size
 
+    def get_tmp_pathname(self):
+        return os.path.join(_get_user_directory(self.user_id),
+                            self.pathname.strip('/'))
+
+    def is_downloaded(self):
+        return os.path.exists(self.get_tmp_pathname())
+
 
 class KindleName(db.Model):
     __tablename__ = 'kindle_name'
@@ -82,3 +95,8 @@ class KindleName(db.Model):
     def __init__(self, user_id, kindle_name):
       self.user_id = user_id
       self.kindle_name = kindle_name
+
+
+def _get_user_directory(user_id):
+    return os.path.join(app.config.get('BASE_DIR', ''),
+                        str(user_id))
