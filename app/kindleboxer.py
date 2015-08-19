@@ -171,10 +171,12 @@ def kindlebox(dropbox_id):
     `ATTACHMENTS_LIMIT` books out of the books added to Dropbox are sent. The
     rest of the books are queued.
     """
-    kindlebox_lock = _acquire_lock(kindlebox.__name__, dropbox_id)
+    kindlebox_lock = _acquire_lock(kindlebox.__name__, dropbox_id, blocking=False)
     # Another worker is taking care of it, so I'm done.
     if kindlebox_lock is None:
-        return False
+        log.debug("Unable to acquire kindlebox lock for dropbox id "
+                  "{0}".format(dropbox_id))
+        return
 
     # Only process Dropbox changes for active users.
     user = User.query.filter_by(dropbox_id=dropbox_id, active=True).first()
@@ -260,7 +262,7 @@ def send_books(user_id, min_book_id=0):
     Before finishing, the task queues another `send_books` task for the next
     batch of (distinct) books.
     """
-    send_lock = _acquire_lock(send_books.__name__, user_id, blocking=True)
+    send_lock = _acquire_lock(send_books.__name__, user_id)
     if send_lock is None:
         return
 
