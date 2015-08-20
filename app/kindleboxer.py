@@ -12,6 +12,7 @@ from app import analytics
 from app import celery
 from app import db
 from app import emailer
+from app import filesystem
 from app import redis
 from app.models import User, Book
 
@@ -106,21 +107,6 @@ def upload_welcome_pdf(dropbox_id):
     return True
 
 
-def _acquire_lock(method_name, dropbox_id, blocking=True):
-    # Lock per user.
-    lock_id = '{0}-lock-{1}'.format(method_name, dropbox_id)
-    lock = redis.lock(lock_id, timeout=LOCK_EXPIRE)
-
-    # If non-blocking and unable to acquire lock, discard the task and hope
-    # that another worker finishes it.
-    if not lock.acquire(blocking=blocking):
-        log.debug("Couldn't acquire lock {0}.".format(lock_id))
-        return None
-
-    log.debug("Lock {0} acquired.".format(lock_id))
-    return lock
-
-
 def _kindlebox(dropbox_id, user, client):
     """
     The main body of a `kindlebox` task. Processes a single Dropbox delta for
@@ -171,7 +157,7 @@ def kindlebox(dropbox_id):
     `ATTACHMENTS_LIMIT` books out of the books added to Dropbox are sent. The
     rest of the books are queued.
     """
-    kindlebox_lock = _acquire_lock(kindlebox.__name__, dropbox_id, blocking=False)
+    kindlebox_lock = acquire_kindlebox_lock(dropbox_id)
     # Another worker is taking care of it, so I'm done.
     if kindlebox_lock is None:
         log.debug("Unable to acquire kindlebox lock for dropbox id "
@@ -220,7 +206,7 @@ def _send_books(user, books):
     for book in books:
         # If there's an error downloading or converting the book, don't try
         # to send it.
-        if not book.is_downloaded():
+        if not os.path.exists(book.get_tmp_pathname()):
             download_book(client, book)
         if book.book_hash is None:
             continue
@@ -262,7 +248,7 @@ def send_books(user_id, min_book_id=0):
     Before finishing, the task queues another `send_books` task for the next
     batch of (distinct) books.
     """
-    send_lock = _acquire_lock(send_books.__name__, user_id)
+    send_lock = acquire_send_books_lock(user_id)
     if send_lock is None:
         return
 
@@ -298,7 +284,7 @@ def send_books(user_id, min_book_id=0):
         # If there are any more books to send after this batch, requeue them.
         next_unsent_book = unsent_books_query.filter(Book.id > unsent_books[-1].id).first()
         if next_unsent_book is None:
-            clear_directory(user.get_directory())
+            filesystem.clear_directory(user.get_directory())
         else:
             send_books.delay(user_id, next_unsent_book.id)
         send_lock.release()
@@ -451,22 +437,6 @@ def convert_to_mobi_path(path):
         return '{path}.mobi'.format(path=stripped_path)
 
 
-def clear_directory(directory):
-    """
-    Remove all possible directories and files from a given directory.
-    """
-    try:
-        for path in os.listdir(directory):
-            subdirectory = os.path.join(directory, path)
-            if os.path.isdir(subdirectory):
-                clear_directory(subdirectory)
-            else:
-                os.unlink(subdirectory)
-        os.rmdir(directory)
-    except OSError:
-        log.debug("Failed to clear tmp directory", exc_info=True)
-
-
 def get_attachment_paths(books):
     attachment_paths = []
     for book in books:
@@ -492,6 +462,37 @@ def get_to_emails(user):
 
 def mimetypes_filter(path):
     return mimetypes.guess_type(path)[0] in BOOK_MIMETYPES
+
+
+def _acquire_lock(method_name, dropbox_id, blocking):
+    # Lock per user.
+    lock_id = '{0}-lock-{1}'.format(method_name, dropbox_id)
+    lock = redis.lock(lock_id, timeout=LOCK_EXPIRE)
+
+    # If non-blocking and unable to acquire lock, discard the task and hope
+    # that another worker finishes it.
+    if not lock.acquire(blocking=blocking):
+        log.debug("Couldn't acquire lock {0}.".format(lock_id))
+        return None
+
+    log.debug("Lock {0} acquired.".format(lock_id))
+    return lock
+
+
+def acquire_kindlebox_lock(dropbox_id, blocking=False):
+    """
+    """
+    return _acquire_lock(kindlebox.__name__,
+                         dropbox_id,
+                         blocking)
+
+
+def acquire_send_books_lock(user_id, blocking=True):
+    """
+    """
+    return _acquire_lock(send_books.__name__,
+                         user_id,
+                         blocking)
 
 
 class KindleboxException(Exception):
