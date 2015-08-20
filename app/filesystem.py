@@ -1,7 +1,10 @@
+import logging
 import os
 
 from app import app
 
+
+log = logging.getLogger()
 
 def get_user_directory(user_id):
     return os.path.join(app.config.get('BASE_DIR', ''),
@@ -21,6 +24,6 @@ def clear_directory(directory):
                 os.unlink(subdirectory)
         os.rmdir(directory)
     except OSError:
-        log.debug("Failed to clear tmp directory", exc_info=True)
+        log.info("Failed to clear tmp directory", exc_info=True)
 
 
