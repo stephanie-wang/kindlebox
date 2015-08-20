@@ -1,13 +1,23 @@
+import logging
+import os
+
 from dropbox.client import DropboxClient
 from flask.ext.script import Command
 from flask.ext.script import Option
 
+from app import app
 from app import db
 from app import emailer
+from app import filesystem
 from app.kindleboxer import kindlebox
 from app.kindleboxer import send_books
+from app.kindleboxer import acquire_kindlebox_lock
+from app.kindleboxer import acquire_send_books_lock
 from app.models import User
 from app.models import Book
+
+
+log = logging.getLogger()
 
 
 class CeleryTasksCommand(Command):
@@ -18,7 +28,7 @@ class CeleryTasksCommand(Command):
     def run(self):
         # Kindleboxing active users.
         active_users = User.query.filter_by(active=True).all()
-        print "Kindleboxing {0} active users...".format(len(active_users))
+        log.info("Kindleboxing {0} active users...".format(len(active_users)))
         for user in active_users:
             kindlebox.delay(user.dropbox_id)
 
@@ -85,3 +95,32 @@ class SendRenameEmailsCommand(Command):
             html = f.read()
             for email in emails:
                 emailer.send_mail('mail@mail.kindlebox.me', ['mail@mail.kindlebox.me'], subject='Kindlebox is now BookDrop', html=html, bcc=[email])
+
+
+class ClearTemporaryDirectoryCommand(Command):
+    def run(self):
+        tmp_directory = app.config.get('BASE_DIR', '')
+        for user_id in os.listdir(tmp_directory):
+            subdirectory = os.path.join(tmp_directory, user_id)
+            if not os.path.isdir(subdirectory):
+                log.error("Non-directory in base directory. Please delete before trying again.")
+                return
+
+            user = User.query.filter_by(id=user_id).first()
+            if user is None:
+                log.info("User {user_id} doesn't exist.".format(user_id=user_id))
+                filesystem.clear_directory(subdirectory)
+            else:
+                kindlebox_lock = acquire_kindlebox_lock(user.dropbox_id, blocking=False)
+                if kindlebox_lock is None:
+                    continue
+
+                send_books_lock = acquire_send_books_lock(user_id, blocking=False)
+                if send_books_lock is None:
+                    kindlebox_lock.release()
+                    continue
+
+                log.info("Clearing user directory id {user_id}.".format(user_id=user_id))
+                filesystem.clear_directory(subdirectory)
+                send_books_lock.release()
+                kindlebox_lock.release()

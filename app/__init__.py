@@ -52,8 +52,10 @@ from commands import ResetUserCommand
 from commands import StatsCommand
 from commands import SeedEmailsCommand
 from commands import SendRenameEmailsCommand
+from commands import ClearTemporaryDirectoryCommand
 manager.add_command('tasks', CeleryTasksCommand)
 manager.add_command('reset-user', ResetUserCommand)
 manager.add_command('stats', StatsCommand)
 manager.add_command('seed-emails', SeedEmailsCommand)
 manager.add_command('send-rename-emails', SendRenameEmailsCommand)
+manager.add_command('clear-directory', ClearTemporaryDirectoryCommand)
