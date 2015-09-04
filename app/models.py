@@ -69,6 +69,13 @@ class Book(db.Model):
         self.mark_unsent(True)
         self.num_attempts = 0
 
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "<Book: {0}>".format(self.pathname)
+
+
     def mark_unsent(self, unsent):
         self.unsent = unsent
 
@@ -92,3 +99,9 @@ class KindleName(db.Model):
     def __init__(self, user_id, kindle_name):
       self.user_id = user_id
       self.kindle_name = kindle_name
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "<KindleName: {0}>".format(self.kindle_name)
