@@ -38,6 +38,8 @@ DEBUG = app.config.get('DEBUG', False)
 DROPBOX_APP_KEY = app.config.get('DROPBOX_APP_KEY', '')
 DROPBOX_APP_SECRET = app.config.get('DROPBOX_APP_SECRET', '')
 
+KINDLE_DOMAINS = ('kindle.com', 'kindle.cn')
+
 stripe.api_key = app.config.get('STRIPE_API_KEY', '')
 
 
@@ -122,10 +124,10 @@ def validate_kindle_name(kindle_name):
     if kindle_name.endswith('@free.kindle.com'):
         kindle_name = kindle_name[:-len('@free.kindle.com')] + '@kindle.com'
 
-    # We could use pyDNS here to check for an SMTP server, but we're filtering
-    # by @kindle.com anyway.
-    if kindle_name.endswith('@kindle.com') and validate_email(kindle_name):
-        return kindle_name[:-len('@kindle.com')]
+    if (any(kindle_name.endswith(kindle_domain) for kindle_domain in
+            KINDLE_DOMAINS) and
+            validate_email(kindle_name)):
+        return kindle_name
 
     return None
 

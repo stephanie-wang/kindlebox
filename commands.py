@@ -15,6 +15,7 @@ from app.kindleboxer import acquire_kindlebox_lock
 from app.kindleboxer import acquire_send_books_lock
 from app.models import User
 from app.models import Book
+from app.models import KindleName
 
 
 log = logging.getLogger()
@@ -124,3 +125,13 @@ class ClearTemporaryDirectoryCommand(Command):
                 filesystem.clear_directory(subdirectory)
                 send_books_lock.release()
                 kindlebox_lock.release()
+
+
+class RewriteKindleNamesCommand(Command):
+    """
+    One-off script to convert all kindle names to kindle email addresses.
+    """
+    def run(self):
+        for row in KindleName.query.all():
+            row.kindle_name = row.kindle_name + '@kindle.com'
+        db.session.commit()

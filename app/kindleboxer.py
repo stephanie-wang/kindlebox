@@ -200,7 +200,7 @@ def _send_books(user, books):
     """
     client = DropboxClient(user.access_token)
     email_from = user.emailer
-    email_to = get_to_emails(user)
+    email_to = [row.kindle_name for row in user.kindle_names.all()]
     attachments = []
     attachment_size = 0
     for book in books:
@@ -454,10 +454,6 @@ def get_attachment_paths(books):
 
 def canonicalize(pathname):
     return pathname.lower()
-
-
-def get_to_emails(user):
-    return [k.kindle_name + '@kindle.com' for k in user.kindle_names.all()]
 
 
 def mimetypes_filter(path):
