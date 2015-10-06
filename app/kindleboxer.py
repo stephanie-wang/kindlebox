@@ -322,7 +322,6 @@ def get_added_books(delta_entries, user_id, client):
                                .filter_by(book_hash=book.book_hash).first())
         if (duplicate is not None):
             book.unsent = duplicate.unsent
-            continue
 
         added_entries.append(book)
 
