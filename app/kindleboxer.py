@@ -188,7 +188,7 @@ def kindlebox(dropbox_id):
                    "{0}.").format(user.id), exc_info=True)
     finally:
         # TODO: Only do this if there were actually books added.
-        send_books(user.id)
+        send_books.delay(user.id)
         kindlebox_lock.release()
 
 
