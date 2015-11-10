@@ -188,7 +188,7 @@ def kindlebox(dropbox_id):
                    "{0}.").format(user.id), exc_info=True)
     finally:
         # TODO: Only do this if there were actually books added.
-        send_books.delay(user.id)
+        send_books.delay(user.id, blocking=False)
         kindlebox_lock.release()
 
 
@@ -237,7 +237,7 @@ def _send_books(user, books):
 
 
 @celery.task(ignore_result=True)
-def send_books(user_id, min_book_id=0):
+def send_books(user_id, min_book_id=0, blocking=True):
     """
     Task to send any books associated with the given user ID that are marked as
     `unsent`. Sends a batch of at most `ATTACHMENTS_LIMIT` books, all with
@@ -248,7 +248,7 @@ def send_books(user_id, min_book_id=0):
     Before finishing, the task queues another `send_books` task for the next
     batch of (distinct) books.
     """
-    send_lock = acquire_send_books_lock(user_id)
+    send_lock = acquire_send_books_lock(user_id, blocking)
     if send_lock is None:
         return
 
@@ -286,7 +286,7 @@ def send_books(user_id, min_book_id=0):
         if next_unsent_book is None:
             filesystem.clear_directory(user.get_directory())
         else:
-            send_books.delay(user_id, next_unsent_book.id)
+            send_books.delay(user_id, min_book_id=next_unsent_book.id)
         send_lock.release()
 
 
@@ -482,7 +482,7 @@ def acquire_kindlebox_lock(dropbox_id, blocking=False):
                          blocking)
 
 
-def acquire_send_books_lock(user_id, blocking=True):
+def acquire_send_books_lock(user_id, blocking):
     """
     """
     return _acquire_lock(send_books.__name__,
