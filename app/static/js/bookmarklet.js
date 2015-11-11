@@ -2,7 +2,6 @@ var KINDLEBOX_MODAL_ID = 'kindlebox-device-picker';
 var KINDLEBOX_FORM_ID = 'kindlebox-devices-form';
 var KINDLEBOX_DEVICES_ID = 'kindlebox-devices-container';
 
-var kindleboxDevices = [];
 var whitelistedEmailer = false;
 
 
@@ -10,40 +9,36 @@ function setDevice(deviceNum) {
   window.location.hash = '#/home/devices/' + deviceNum;
 }
 
-function htmlToString($html) {
-  var text = '';
-  try {
-    text = $html[0].childNodes[0].textContent.trim();
-  } catch(error) {
-  }
-  return text;
+function gotoSettings() {
+  window.location.hash = '#/home/settings/pdoc';
+}
+
+function htmlToString(html) {
+  return html.textContent.trim();
+}
+
+function $getDevices() {
+  gotoSettings();
+  return $('[ng-repeat="item in devices"]');
 }
 
 function getNumDevices() {
-  return $('.deviceName_myx.a-size-base').length;
+  $devices = $getDevices();
+  return $devices.length;
 }
 
 function getDevices() {
-  if (kindleboxDevices.length > 0) {
-    return kindleboxDevices;
-  }
-
-  var numDevices = getNumDevices();
-  var devices = [];
-  for (var i = 1; i <= numDevices; i++) {
-    setDevice(i);
-    var emailContainer = $('#dv_dt_email_value');
-    if (emailContainer.length > 0) {
-      var device = {
-        'tag': htmlToString($('#dv_dt_name_value')),
-        'email': htmlToString(emailContainer),
-        'type': htmlToString($('#deviceDetail_type_myx_value')),
-      };
-      devices.push(device);
+  var kindleboxDevices = [];
+  var $devices = $getDevices();
+  for (var i = 0; i < $devices.length; i++) {
+    var deviceChildren = $($devices[i]).children();
+    var device = {
+      'tag': htmlToString(deviceChildren[0]),
+      'email': htmlToString(deviceChildren[1]),
     }
+    kindleboxDevices.push(device);
   }
-  kindleboxDevices = devices;
-  return devices;
+  return kindleboxDevices;
 }
 
 function whitelistEmailer(emailer, successCallback) {
@@ -92,6 +87,7 @@ function addModal(kindleboxCsrfToken, appUrl, emailer) {
       '          <input type="hidden" name="csrf_token" value="' + kindleboxCsrfToken + '">' +
       '          <input type="hidden" name="kindle_names" value="">' +
       '          <div id="' + KINDLEBOX_DEVICES_ID + '">' +
+      '          <img id="kindlebox-devices-loading" src="https://getbookdrop.com/static/img/loader.gif" />' +
       '          </div>' +
       '        </form>' +
       '      </div>' +
@@ -126,26 +122,30 @@ function addModal(kindleboxCsrfToken, appUrl, emailer) {
   });
 
   // Add a checkbox for each device eligible for BookDrop.
-  var devices = getDevices();
-  if (devices.length == 0) {
-    $modalHtml.find('.modal-body').text('Oops, it seems you don\'t have any \
-        devices eligible for BookDrop! Make sure to register a \
-        Kindle with this Amazon account before trying again :)')
-    $modalHtml.find('#activate-kindlebox-btn').attr('disabled', 'disabled');
-  } else {
-    for (var i = 0; i < devices.length; i++) {
-      var label = devices[i].tag;
-      if (devices[i].type) {
-        label += ' (' + devices[i].type + ')';
+  gotoSettings();
+  setTimeout(function() {
+    $('#kindlebox-devices-loading').hide();
+    var devices = getDevices();
+    if (devices.length == 0) {
+      $modalHtml.find('.modal-body').text('Oops, it seems you don\'t have any \
+          devices eligible for BookDrop! Make sure to register a \
+          Kindle with this Amazon account before trying again :)')
+      $modalHtml.find('#activate-kindlebox-btn').attr('disabled', 'disabled');
+    } else {
+      for (var i = 0; i < devices.length; i++) {
+        var label = devices[i].tag;
+        if (devices[i].type) {
+          label += ' (' + devices[i].type + ')';
+        }
+        $modalHtml.find("#" + KINDLEBOX_DEVICES_ID).append('<div class="checkbox">' +
+          '  <input type="checkbox" id="kindlebox-device-' + i + '" class="kindlebox-device-checkbox" name="' + devices[i].email + '">' +
+          '  <label for="kindlebox-device-' + i + '" class="kindlebox-device-label" style="">' +
+             label +
+           '</label>' +
+          '</div>');
       }
-      $modalHtml.find("#" + KINDLEBOX_DEVICES_ID).append('<div class="checkbox">' +
-        '  <input type="checkbox" id="kindlebox-device-' + i + '" class="kindlebox-device-checkbox" name="' + devices[i].email + '">' +
-        '  <label for="kindlebox-device-' + i + '" class="kindlebox-device-label" style="">' +
-           label +
-         '</label>' +
-        '</div>');
     }
-  }
+  }, 2000);
 
   $('body').append($modalHtml);
 }
