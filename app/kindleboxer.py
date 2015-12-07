@@ -283,11 +283,18 @@ def send_books(user_id, min_book_id=0, blocking=True):
     finally:
         # If there are any more books to send after this batch, requeue them.
         next_unsent_book = unsent_books_query.filter(Book.id > unsent_books[-1].id).first()
+
+        send_lock.release()
+
         if next_unsent_book is None:
+            kindlebox_lock = acquire_kindlebox_lock(user.dropbox_id)
+            # Dropbox may have registered more books, so don't clear them yet.
+            if kindlebox_lock is None:
+                return
             filesystem.clear_directory(user.get_directory())
+            kindlebox_lock.release()
         else:
             send_books.delay(user_id, min_book_id=next_unsent_book.id)
-        send_lock.release()
 
 
 def get_added_books(delta_entries, user_id, client):
