@@ -257,8 +257,6 @@ def send_books(user_id, min_book_id=0, blocking=True):
     if user is None:
         return
 
-    log.info("Processing book resend for user id {0}".format(user_id))
-
     # Get the next batch of books that haven't been sent yet and are still
     # under the maximum number of send attempts.
     unsent_books_query = (user.books.filter_by(unsent=True)
@@ -269,6 +267,10 @@ def send_books(user_id, min_book_id=0, blocking=True):
     if len(unsent_books) == 0:
         send_lock.release()
         return
+
+    log_string = ['{' + str(i) + '}' for i in range(len(unsent_books))]
+    log_string = ' '.join(log_string).format(*[book.id for book in unsent_books])
+    log.info("Processing book resend for user id {0}, book ids {1}".format(user_id, log_string))
 
     # Re-download and convert books that failed to send before. Check that
     # hashes match.
