@@ -117,6 +117,12 @@ def logout():
     return redirect(url_for('home', redirect=True))
 
 
+def free_kindle_name(kindle_name):
+    n = kindle_name.split('@')
+    n[1] = 'free.' + n[1]
+    return '@'.join(n)
+
+
 def validate_kindle_name(kindle_name):
     # Check for duplicates? Might end up blocking real users...
     kindle_name = kindle_name.lower()
@@ -127,7 +133,7 @@ def validate_kindle_name(kindle_name):
     if (any(kindle_name.endswith(kindle_domain) for kindle_domain in
             KINDLE_DOMAINS) and
             validate_email(kindle_name)):
-        return kindle_name
+        return free_kindle_name(kindle_name)
 
     return None
 
