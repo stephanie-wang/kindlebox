@@ -7,6 +7,7 @@ import subprocess
 import time
 
 from dropbox.client import DropboxClient
+from dropbox.rest import ErrorResponse
 
 from app import analytics
 from app import celery
@@ -115,7 +116,13 @@ def _kindlebox(dropbox_id, user, client):
     possible. For any removed books, delete them from the database. Finally,
     update the user's Dropbox API cursor.
     """
-    delta = client.delta(user.cursor)
+    try:
+        delta = client.delta(user.cursor)
+    except ErrorResponse as e:
+        log.info("Marking user id {0} inactive due to {1}".format(user.id, e.error_msg))
+        user.active = False
+        db.session.commit()
+        return True
 
     # Process delta to get added and removed books. Also download any newly
     # added books and get the hashes.
@@ -188,7 +195,8 @@ def kindlebox(dropbox_id):
                    "{0}.").format(user.id), exc_info=True)
     finally:
         # TODO: Only do this if there were actually books added.
-        send_books.delay(user.id, blocking=False)
+        if user.active:
+            send_books.delay(user.id, blocking=False)
         kindlebox_lock.release()
 
 
