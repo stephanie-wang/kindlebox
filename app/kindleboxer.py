@@ -3,7 +3,7 @@ import hashlib
 import logging
 import mimetypes
 import os
-import subprocess
+import subprocess32 as subprocess
 import time
 
 from dropbox.client import DropboxClient
@@ -26,7 +26,8 @@ LOCK_EXPIRE = 60 * 30
 # And can only email 25 books at a time. Sendgrid only allows 20MB at a time,
 # after encoding to email text, so more like 15. Mailgun is about 25MB?  And
 # can only email 25 books at a time.
-ATTACHMENTS_LIMIT = 25
+# Lower ATTACHMENTS_LIMIT to prevent users from hogging the celery workers.
+ATTACHMENTS_LIMIT = 5
 ATTACHMENTS_SIZE_LIMIT = 25 * (10**6)
 AMAZON_SIZE_LIMIT = 50 * (10**6)
 
@@ -296,6 +297,9 @@ def send_books(user_id, min_book_id=0, blocking=True):
 
         send_lock.release()
 
+        # For some reason, calibre is leaving a lot of garbage files...
+        filesystem.clear_calibre_files()
+
         if next_unsent_book is None:
             kindlebox_lock = acquire_kindlebox_lock(user.dropbox_id)
             # Dropbox may have registered more books, so don't clear them yet.
@@ -369,11 +373,15 @@ def convert_book(book):
         return None
 
     log.info("Converting book for user id {0}".format(book.user_id))
-    p = subprocess.Popen(['ebook-convert', tmp_path, mobi_tmp_path],
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
-    _, stderr = p.communicate()
-    return stderr
+    try:
+        subprocess.check_output(['ebook-convert', tmp_path, mobi_tmp_path],
+                                timeout=300)
+    except subprocess.CalledProcessError as e:
+        return e.output
+    except subprocess.TimeoutExpired as e:
+        return "Timed out converting book"
+    except Exception as e:
+        return e.message
 
 
 def download_book(client, book):
