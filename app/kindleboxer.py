@@ -73,6 +73,8 @@ BOOK_MIMETYPES = CONVERTIBLE_MIMETYPES.union({
     'image/png',
     })
 BOOK_CHUNK = 5
+# Number of seconds to wait before timing out calibre conversion
+CONVERSION_TIMEOUT = 600
 
 
 @celery.task(ignore_result=True)
@@ -195,10 +197,10 @@ def kindlebox(dropbox_id):
         log.error(("Failed to process dropbox webhook for user id "
                    "{0}.").format(user.id), exc_info=True)
     finally:
+        kindlebox_lock.release()
         # TODO: Only do this if there were actually books added.
         if user.active:
-            send_books.delay(user.id, blocking=False)
-        kindlebox_lock.release()
+            send_books(user.id, blocking=False)
 
 
 def _send_books(user, books):
@@ -308,7 +310,7 @@ def send_books(user_id, min_book_id=0, blocking=True):
             filesystem.clear_directory(user.get_directory())
             kindlebox_lock.release()
         else:
-            send_books.delay(user_id, min_book_id=next_unsent_book.id)
+            send_books.delay(user_id, min_book_id=next_unsent_book.id, blocking=False)
 
 
 def get_added_books(delta_entries, user_id, client):
@@ -375,7 +377,7 @@ def convert_book(book):
     log.info("Converting book for user id {0}".format(book.user_id))
     try:
         subprocess.check_output(['ebook-convert', tmp_path, mobi_tmp_path],
-                                timeout=300)
+                                timeout=CONVERSION_TIMEOUT)
     except subprocess.CalledProcessError as e:
         return e.output
     except subprocess.TimeoutExpired as e:
