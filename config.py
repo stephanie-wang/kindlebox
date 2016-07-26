@@ -29,6 +29,7 @@ REDIS_PORT = 6379
 REDIS_PASSWORD = None
 
 CELERY_BROKER_URL = 'amqp://guest:guest@localhost//'
+CELERY_ROUTES = {'conversion.tasks.convert': {'queue': 'conversion'}}
 
 DROPBOX_APP_KEY = ''
 DROPBOX_APP_SECRET = ''

@@ -12,6 +12,11 @@ MAILGUN_API_URL = 'https://api.mailgun.net/v2/{0}/messages'.format(app.config.ge
 
 
 def send_mail(send_from, send_to, files=None, use_mailgun=False, subject='convert', html='convert', bcc=None):
+    """
+    Sends an email, with the subject line 'convert'. Takes in from address, a
+    list of to addresses, and an optional list of files to attach. Returns
+    status code and message returned by mail API.
+    """
     if bcc is None:
         bcc = []
     if files is None:
