@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 from app import db
 from app import filesystem
@@ -58,6 +59,7 @@ class Book(db.Model):
     size = db.Column(db.Integer)
     unsent = db.Column(db.Boolean)
     num_attempts = db.Column(db.Integer)
+    date_created = db.Column(db.DateTime)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
     def __init__(self, user_id, pathname, size, unsent=False, book_hash=''):
@@ -68,6 +70,8 @@ class Book(db.Model):
         # Books are always unsent at first
         self.mark_unsent(True)
         self.num_attempts = 0
+        if self.date_created is None:
+            self.date_created = datetime.utcnow()
 
     def __repr__(self):
         return self.__str__()
