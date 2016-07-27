@@ -101,7 +101,7 @@ def upload_welcome_pdf(dropbox_id):
         with open('app/static/bookdrop_welcome.pdf', 'rb') as f:
             response = client.put_file('Welcome to BookDrop.pdf', f, overwrite=True)
             if response:
-                log.info("Welcome PDF sent to user ID {0}.".format(user.id))
+                log.info(u"Welcome PDF sent to user ID {0}.".format(user.id))
             else:
                 raise Exception("No response received after sending welcome PDF")
 
@@ -109,7 +109,7 @@ def upload_welcome_pdf(dropbox_id):
         db.session.commit()
 
     except:
-        log.error(("Welcome PDF failed for user ID "
+        log.error((u"Welcome PDF failed for user ID "
                    "{0}.").format(user.id), exc_info=True)
         return False
 
@@ -127,7 +127,7 @@ def _kindlebox(dropbox_id, user, client):
     try:
         delta = client.delta(user.cursor)
     except ErrorResponse as e:
-        log.info("Marking user id {0} inactive due to {1}".format(user.id, e.error_msg))
+        log.info(u"Marking user id {0} inactive due to {1}".format(user.id, e.error_msg))
         user.active = False
         db.session.commit()
         return True
@@ -139,7 +139,7 @@ def _kindlebox(dropbox_id, user, client):
     # database in case it can be downloaded later.
     added_books = get_added_books(delta['entries'], user.id, client)
     removed_books = get_removed_books(delta['entries'], user.id)
-    log.debug("Delta contains {0} added books, {1} removed "
+    log.debug(u"Delta contains {0} added books, {1} removed "
               "books".format(len(added_books), len(removed_books)))
 
     # If there are no more changes to process, update the cursor and we are
@@ -175,7 +175,7 @@ def kindlebox(dropbox_id):
     kindlebox_lock = acquire_kindlebox_lock(dropbox_id)
     # Another worker is taking care of it, so I'm done.
     if kindlebox_lock is None:
-        log.debug("Unable to acquire kindlebox lock for dropbox id "
+        log.debug(u"Unable to acquire kindlebox lock for dropbox id "
                   "{0}".format(dropbox_id))
         return
 
@@ -185,7 +185,7 @@ def kindlebox(dropbox_id):
         kindlebox_lock.release()
         return
 
-    log.info("Processing dropbox webhook for user id {0}".format(user.id))
+    log.info(u"Processing dropbox webhook for user id {0}".format(user.id))
     # Loop until there is no delta.
     # NOTE: There is a slight chance of a race condition between dropbox
     # webhook and two celery workers that would result in a delta getting
@@ -193,13 +193,13 @@ def kindlebox(dropbox_id):
     client = DropboxClient(user.access_token)
     try:
         while True:
-            log.debug("Processing one kindlebox iteration for user id "
+            log.debug(u"Processing one kindlebox iteration for user id "
                       "{0}".format(user.id))
             done = _kindlebox(dropbox_id, user, client)
             if done:
                 break
     except:
-        log.error(("Failed to process dropbox webhook for user id "
+        log.error((u"Failed to process dropbox webhook for user id "
                    "{0}.").format(user.id), exc_info=True)
 
     kindlebox_lock.release()
@@ -227,7 +227,7 @@ def _send_books(user, books):
             continue
         error = convert_book(book)
         if error:
-            log.error("Failed to ebook-convert {book} for user id {user_id}\n"
+            log.error(u"Failed to ebook-convert {book} for user id {user_id}\n"
                       "STDERR: {stderr}\n".format(book=book.pathname,
                                                   user_id=user.id,
                                                   stderr=error))
@@ -302,7 +302,7 @@ def send_books(user_id, min_book_id=0, convert=False):
         log_string = ' '.join(log_string).format(*[book.id for book in unsent_books])
         if convert:
             log_string += ', with conversion'
-    log.info("Processing book resend for user id {0}, book ids {1}".format(user_id, log_string))
+    log.info(u"Processing book resend for user id {0}, book ids {1}".format(user_id, log_string))
 
     # Re-download and convert books that failed to send before.
     try:
@@ -312,7 +312,7 @@ def send_books(user_id, min_book_id=0, convert=False):
             book.num_attempts += 1
         db.session.commit()
     except:
-        log.error("Failed to resend books for user id {0}".format(user_id),
+        log.error(u"Failed to resend books for user id {0}".format(user_id),
                   exc_info=True)
 
     next_unsent_book = None
@@ -408,7 +408,7 @@ def convert_book(book):
     if mobi_tmp_path is None:
         return None
 
-    log.info("Converting book for user id {0}".format(book.user_id))
+    log.info(u"Converting book for user id {0}".format(book.user_id))
     try:
         subprocess.check_output(['ebook-convert', tmp_path, mobi_tmp_path],
                                 timeout=CONVERSION_TIMEOUT)
@@ -435,7 +435,7 @@ def download_book(client, book):
         if not os.path.exists(book_dir):
             os.makedirs(book_dir)
     except OSError:
-        log.error("Error creating directories for book {0}".format(book.pathname),
+        log.error(u"Error creating directories for book {0}".format(book.pathname),
                   exc_info=True)
 
     try:
@@ -448,7 +448,7 @@ def download_book(client, book):
 
         book.book_hash = md5.hexdigest()
     except:
-        log.error("Failed to download book {book_path} for user id "
+        log.error(u"Failed to download book {book_path} for user id "
                   "{user_id}".format(book_path=book.pathname,
                                      user_id=book.user_id), exc_info=True)
         return None
@@ -462,7 +462,7 @@ def email_attachments(email_from, email_to, attachments, user_id):
     whether it was successfully emailed or not.
     """
     attachment_paths = get_attachment_paths(attachments)
-    log.debug("Sending email to " + ' '.join(email_to) + " " + ' '.join(attachment_paths))
+    log.debug(u"Sending email to " + ' '.join(email_to) + " " + ' '.join(attachment_paths))
 
     try:
         # First try to batch email.
@@ -470,7 +470,7 @@ def email_attachments(email_from, email_to, attachments, user_id):
         for book in attachments:
             book.mark_unsent(False)
     except:
-        log.error("Failed to send books for user id {0}".format(user_id),
+        log.error(u"Failed to send books for user id {0}".format(user_id),
                   exc_info=True)
 
         # If fail to batch email, try sending individually instead.
@@ -479,7 +479,7 @@ def email_attachments(email_from, email_to, attachments, user_id):
                 _email_attachments(email_from, email_to, get_attachment_paths([book]))
                 book.mark_unsent(False)
             except:
-                log.error("Failed to resend book for user id {0}".format(user_id),
+                log.error(u"Failed to resend book for user id {0}".format(user_id),
                           exc_info=True)
                 book.mark_unsent(True)
 
@@ -493,8 +493,8 @@ def _email_attachments(email_from, email_to, attachment_paths):
 
 def convert_to_mobi_path(path):
     if mimetypes.guess_type(path)[0] in CONVERTIBLE_MIMETYPES:
-        stripped_path = os.path.splitext(path)[0].encode('ascii', 'ignore')
-        return '{path}.mobi'.format(path=stripped_path)
+        stripped_path = os.path.splitext(path)[0]
+        return u'{path}.mobi'.format(path=stripped_path)
 
 
 def get_attachment_paths(books):
@@ -528,10 +528,10 @@ def _acquire_lock(method_name, dropbox_id):
     # If non-blocking and unable to acquire lock, discard the task and hope
     # that another worker finishes it.
     if not lock.acquire(blocking=False):
-        log.debug("Couldn't acquire lock {0}.".format(lock_id))
+        log.debug(u"Couldn't acquire lock {0}.".format(lock_id))
         return None
 
-    log.debug("Lock {0} acquired.".format(lock_id))
+    log.debug(u"Lock {0} acquired.".format(lock_id))
     return lock
 
 
