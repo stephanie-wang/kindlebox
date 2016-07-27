@@ -28,6 +28,7 @@ LOCK_EXPIRE = 60 * 30
 # can only email 25 books at a time.
 # Lower ATTACHMENTS_LIMIT to prevent users from hogging the celery workers.
 ATTACHMENTS_LIMIT = 5
+CONVERTIBLE_ATTACHMENTS_LIMIT = 1
 ATTACHMENTS_SIZE_LIMIT = 25 * (10**6)
 AMAZON_SIZE_LIMIT = 50 * (10**6)
 
@@ -276,8 +277,7 @@ def send_books(user_id, min_book_id=0, convert=False, blocking=True):
     unsent_books_query = (user.books.filter_by(unsent=True)
                                     .filter(Book.num_attempts < MAX_SEND_ATTEMPTS)
                                     .order_by(Book.id))
-    unsent_books = (unsent_books_query.filter(Book.id >= min_book_id)
-                                      .limit(ATTACHMENTS_LIMIT).all())
+    unsent_books = unsent_books_query.filter(Book.id >= min_book_id).all()
 
     # Only short-circuit if there are no new books at all to send, not just
     # ones that don't need conversion.
@@ -285,6 +285,7 @@ def send_books(user_id, min_book_id=0, convert=False, blocking=True):
         send_lock.release()
         return
 
+    # Send either books that need conversion or books that don't.
     compatible_books, convertible_books = [], []
     for book in unsent_books:
         if convert_to_mobi_path(book.pathname) is None:
@@ -292,22 +293,22 @@ def send_books(user_id, min_book_id=0, convert=False, blocking=True):
         else:
             convertible_books.append(book)
     if convert:
-        books_to_send = convertible_books
+        unsent_books = convertible_books[:CONVERTIBLE_ATTACHMENTS_LIMIT]
     else:
-        books_to_send = compatible_books
+        unsent_books = compatible_books[:ATTACHMENTS_LIMIT]
 
-    log_string = ['{' + str(i) + '}' for i in range(len(books_to_send))]
-    if len(books_to_send) > 0:
-        log_string = ' '.join(log_string).format(*[book.id for book in books_to_send])
+    log_string = ['{' + str(i) + '}' for i in range(len(unsent_books))]
+    if len(unsent_books) > 0:
+        log_string = ' '.join(log_string).format(*[book.id for book in unsent_books])
         if convert:
             log_string += ', with conversion'
     log.info("Processing book resend for user id {0}, book ids {1}".format(user_id, log_string))
 
     # Re-download and convert books that failed to send before.
     try:
-        _send_books(user, books_to_send)
+        _send_books(user, unsent_books)
         # TODO: Reset all attempts to 0 before release.
-        for book in books_to_send:
+        for book in unsent_books:
             book.num_attempts += 1
         db.session.commit()
     except:
