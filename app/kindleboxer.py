@@ -342,9 +342,15 @@ def send_books(user_id, min_book_id=0, convert=False):
                                    {'convert': True},
                                    queue='conversion')
     else:
-        send_books.delay(user_id,
-                         min_book_id=next_unsent_book.id,
-                         convert=convert)
+        queue_kwarg = {}
+        if convert:
+            queue_kwarg['queue'] = 'conversion'
+        send_books.apply_async((user_id, ),
+                               {
+                                   'min_book_id': next_unsent_book.id,
+                                   'convert': convert,
+                               },
+                               **queue_kwarg)
 
 
 def get_added_books(delta_entries, user_id, client):
