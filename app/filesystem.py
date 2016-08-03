@@ -6,9 +6,10 @@ from app import app
 
 log = logging.getLogger()
 
-def get_user_directory(user_id):
+def get_user_directory(user_id, *tags):
     return os.path.join(app.config.get('BASE_DIR', ''),
-                        str(user_id))
+                        unicode(user_id),
+                        *tags)
 
 
 def clear_directory(directory):
@@ -24,7 +25,17 @@ def clear_directory(directory):
                 os.unlink(subdirectory)
         os.rmdir(directory)
     except OSError:
-        log.info("Failed to clear tmp directory", exc_info=True)
+        if os.path.exists(directory):
+            log.info("Failed to clear tmp directory", exc_info=True)
+
+
+def clear_empty_directory(directory):
+    try:
+        if len(os.listdir(directory)) == 0:
+            os.rmdir(directory)
+    except OSError:
+        if os.path.exists(directory):
+            log.info("Failed to clear tmp directory", exc_info=True)
 
 
 def clear_calibre_files():

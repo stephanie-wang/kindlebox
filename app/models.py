@@ -47,9 +47,6 @@ class User(db.Model):
     def set_uploaded_welcome_pdf(self):
         self.uploaded_welcome_pdf = True
 
-    def get_directory(self):
-        return filesystem.get_user_directory(self.id)
-
 
 class Book(db.Model):
     __tablename__ = 'book'
@@ -89,8 +86,8 @@ class Book(db.Model):
         else:
             return self.size
 
-    def get_tmp_pathname(self):
-        return os.path.join(filesystem.get_user_directory(self.user_id),
+    def get_tmp_pathname(self, tag):
+        return os.path.join(filesystem.get_user_directory(self.user_id, tag),
                             self.pathname.strip('/'))
 
 

@@ -116,13 +116,11 @@ def upload_welcome_pdf(dropbox_id):
     return True
 
 
-def _kindlebox(dropbox_id, user, client):
+def _kindlebox(user, client):
     """
     The main body of a `kindlebox` task. Processes a single Dropbox delta for
-    the given Dropbox ID. For any newly added books that satisfy the
-    requirements (under size limit, etc.), attempts to email as many of them as
-    possible. For any removed books, delete them from the database. Finally,
-    update the user's Dropbox API cursor.
+    the given user. Adds and deletes any books from the database, and updates
+    the user's Dropbox API cursor.
     """
     try:
         delta = client.delta(user.cursor)
@@ -172,17 +170,15 @@ def kindlebox(dropbox_id):
     `ATTACHMENTS_LIMIT` books out of the books added to Dropbox are sent. The
     rest of the books are queued.
     """
-    kindlebox_lock = acquire_kindlebox_lock(dropbox_id)
-    # Another worker is taking care of it, so I'm done.
-    if kindlebox_lock is None:
-        log.debug(u"Unable to acquire kindlebox lock for dropbox id "
-                  "{0}".format(dropbox_id))
-        return
-
     # Only process Dropbox changes for active users.
     user = User.query.filter_by(dropbox_id=dropbox_id, active=True).first()
     if user is None:
-        kindlebox_lock.release()
+        return
+    kindlebox_lock = acquire_kindlebox_lock(user.id)
+    # Another worker is taking care of it, so I'm done.
+    if kindlebox_lock is None:
+        log.debug(u"Unable to acquire kindlebox lock for user id "
+                  "{0}".format(user.id))
         return
 
     log.info(u"Processing dropbox webhook for user id {0}".format(user.id))
@@ -195,7 +191,7 @@ def kindlebox(dropbox_id):
         while True:
             log.debug(u"Processing one kindlebox iteration for user id "
                       "{0}".format(user.id))
-            done = _kindlebox(dropbox_id, user, client)
+            done = _kindlebox(user, client)
             if done:
                 break
     except:
@@ -203,6 +199,8 @@ def kindlebox(dropbox_id):
                    "{0}.").format(user.id), exc_info=True)
 
     kindlebox_lock.release()
+    clear_user_files(user.id, u'kindlebox')
+
     if user.active:
         send_books(user.id)
 
@@ -221,8 +219,7 @@ def _send_books(user, books):
     for book in books:
         # If there's an error downloading or converting the book, don't try
         # to send it.
-        if not os.path.exists(book.get_tmp_pathname()):
-            download_book(client, book)
+        download_book(client, book, u'send_books')
         if book.book_hash is None:
             continue
         error = convert_book(book)
@@ -256,12 +253,11 @@ def send_books(user_id, min_book_id=0, convert=False):
     """
     Task to send any books associated with the given user ID that are marked as
     `unsent`. Sends a batch of at most `ATTACHMENTS_LIMIT` books, all with
-    Book.id greater than or equal to the given `min_book_id`. Books are
-    downloaded if necessary. Download (and convert) books that need conversion
-    if and only if `convert` is True.
+    Book.id greater than or equal to the given `min_book_id`. Download books.
+    Convert books if `convert` is True.
 
-    Before finishing, the task queues another `send_books` task for the next
-    batch of (distinct) books.
+    The task queues another `send_books` task for the next batch of (distinct)
+    books.
     """
     send_lock = acquire_send_books_lock(user_id)
     if send_lock is None:
@@ -283,6 +279,7 @@ def send_books(user_id, min_book_id=0, convert=False):
     # ones that don't need conversion.
     if len(unsent_books) == 0 and min_book_id == 0:
         send_lock.release()
+        clear_user_files(user.id, u'send_books')
         return
 
     # Send either books that need conversion or books that don't.
@@ -321,27 +318,15 @@ def send_books(user_id, min_book_id=0, convert=False):
         next_unsent_book = unsent_books_query.filter(Book.id > unsent_books[-1].id).first()
 
     send_lock.release()
-
     # For some reason, calibre is leaving a lot of garbage files...
     filesystem.clear_calibre_files()
+    clear_user_files(user.id, u'send_books')
 
-    if next_unsent_book is None:
-        # If we've finished sending all books, including ones that need
-        # conversion, clear all the books from the filesystem and finish
-        # the task.
-        if convert:
-            kindlebox_lock = acquire_kindlebox_lock(user.dropbox_id)
-            # Dropbox may have registered more books, so don't clear them yet.
-            if kindlebox_lock is None:
-                return
-            filesystem.clear_directory(user.get_directory())
-            kindlebox_lock.release()
-        # Else, start sending the books that need conversion.
-        else:
-            send_books.apply_async((user_id, ),
-                                   {'convert': True},
-                                   queue='conversion')
-    else:
+    if next_unsent_book is None and not convert:
+        send_books.apply_async((user_id, ),
+                               {'convert': True},
+                               queue='conversion')
+    elif next_unsent_book is not None:
         queue_kwarg = {}
         if convert:
             queue_kwarg['queue'] = 'conversion'
@@ -377,7 +362,7 @@ def get_added_books(delta_entries, user_id, client):
                     pathname,
                     metadata['bytes'])
 
-        download_book(client, book)
+        download_book(client, book, u'kindlebox')
 
         # Make sure that the book is not a duplicate of a previously added book
         # (probably a renamed file).
@@ -409,7 +394,7 @@ def convert_book(book):
     Attempt to convert any books of type in `CONVERTIBLE_MIMETYPES` to .mobi,
     in the same folder as the given temporary path.
     """
-    tmp_path = book.get_tmp_pathname()
+    tmp_path = book.get_tmp_pathname(u'send_books')
     mobi_tmp_path = convert_to_mobi_path(tmp_path)
     if mobi_tmp_path is None:
         return None
@@ -426,7 +411,7 @@ def convert_book(book):
         return e.message
 
 
-def download_book(client, book):
+def download_book(client, book, tag):
     """
     Download the given book from the Dropbox client to a temporary path. Make
     all the directories in the given book path at the temporary root folder if
@@ -435,7 +420,7 @@ def download_book(client, book):
     Set the book's hash of the downloaded file.
     """
     # Make all the necessary nested directories in the temporary directory.
-    tmp_path = book.get_tmp_pathname()
+    tmp_path = book.get_tmp_pathname(tag)
     try:
         book_dir = os.path.dirname(tmp_path)
         if not os.path.exists(book_dir):
@@ -467,7 +452,16 @@ def email_attachments(email_from, email_to, attachments, user_id):
     attachment, add the book to the user associated with the given ID and mark
     whether it was successfully emailed or not.
     """
-    attachment_paths = get_attachment_paths(attachments)
+    attachment_paths = []
+    for book in attachments:
+        tmp_path = book.get_tmp_pathname(u'send_books')
+
+        # If this book got converted, get the .mobi path instead.
+        mobi_tmp_path = convert_to_mobi_path(tmp_path)
+        if mobi_tmp_path is not None:
+            tmp_path = mobi_tmp_path
+
+        attachment_paths.append(tmp_path)
     log.debug(u"Sending email to " + ' '.join(email_to) + " " + ' '.join(attachment_paths))
 
     try:
@@ -480,9 +474,9 @@ def email_attachments(email_from, email_to, attachments, user_id):
                   exc_info=True)
 
         # If fail to batch email, try sending individually instead.
-        for book in attachments:
+        for book, path in zip(attachments, attachment_paths):
             try:
-                _email_attachments(email_from, email_to, get_attachment_paths([book]))
+                _email_attachments(email_from, email_to, [path])
                 book.mark_unsent(False)
             except:
                 log.error(u"Failed to resend book for user id {0}".format(user_id),
@@ -503,21 +497,6 @@ def convert_to_mobi_path(path):
         return u'{path}.mobi'.format(path=stripped_path)
 
 
-def get_attachment_paths(books):
-    attachment_paths = []
-    for book in books:
-        tmp_path = book.get_tmp_pathname()
-
-        # If this book got converted, get the .mobi path instead.
-        mobi_tmp_path = convert_to_mobi_path(tmp_path)
-        if mobi_tmp_path is not None:
-            tmp_path = mobi_tmp_path
-
-        attachment_paths.append(tmp_path)
-
-    return attachment_paths
-
-
 def canonicalize(pathname):
     return pathname.lower()
 
@@ -526,9 +505,9 @@ def mimetypes_filter(path):
     return mimetypes.guess_type(path)[0] in BOOK_MIMETYPES
 
 
-def _acquire_lock(method_name, dropbox_id):
+def _acquire_lock(method_name, user_id):
     # Lock per user.
-    lock_id = '{0}-lock-{1}'.format(method_name, dropbox_id)
+    lock_id = '{0}-lock-{1}'.format(method_name, user_id)
     lock = redis.lock(lock_id, timeout=LOCK_EXPIRE)
 
     # If non-blocking and unable to acquire lock, discard the task and hope
@@ -541,11 +520,11 @@ def _acquire_lock(method_name, dropbox_id):
     return lock
 
 
-def acquire_kindlebox_lock(dropbox_id):
+def acquire_kindlebox_lock(user_id):
     """
     """
     return _acquire_lock(kindlebox.__name__,
-                         dropbox_id)
+                         user_id)
 
 
 def acquire_send_books_lock(user_id):
@@ -553,6 +532,31 @@ def acquire_send_books_lock(user_id):
     """
     return _acquire_lock(send_books.__name__,
                          user_id)
+
+
+def clear_user_files(user_id, task):
+    """
+    Clears as many temporary files as possible for the given `user_id` and
+    celery `task`. If `task` is not one of 'kindlebox' or 'send_books', does
+    nothing.
+    """
+    if task == u'kindlebox':
+        acquire_method = acquire_send_books_lock
+    elif task == u'send_books':
+        acquire_method = acquire_kindlebox_lock
+    else:
+        return
+
+    task_directory = filesystem.get_user_directory(user_id, task)
+    filesystem.clear_directory(task_directory)
+
+    # May be downloading books to send, so don't clear the upper-level
+    # directory yet.
+    lock = acquire_method(user_id)
+    if lock is not None:
+        user_directory = filesystem.get_user_directory(user_id)
+        filesystem.clear_empty_directory(user_directory)
+        lock.release()
 
 
 class KindleboxException(Exception):
