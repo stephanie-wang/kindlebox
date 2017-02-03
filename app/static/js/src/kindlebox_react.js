@@ -152,7 +152,6 @@ var EmailerInstructions = React.createClass({
           "setDevice(1);" +
           "var waitDevices = setInterval(function() {" +
             "try {" +
-              "document.getElementsByClassName('noDevicesFound_myx')[0].style.display;" +
               "addModal(\"<kindleboxCsrfToken>\", \"<appUrl>\", \"<emailer>\");" +
               "showModal();" +
               "clearInterval(waitDevices);" +
