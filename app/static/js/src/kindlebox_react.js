@@ -185,6 +185,17 @@ var EmailerInstructions = React.createClass({
       <div>
         <div className="instruction-row">
           <div className="instruction-num">
+            1a.
+          </div>
+          <div className="instruction instruction-text instruction-bold">
+            If this is not your first time activating Bookdrop, make sure
+            your books are in the right folder! Move your books to the
+            folder <code>Dropbox/my-bookdrop</code>.
+
+          </div>
+        </div>
+        <div className="instruction-row">
+          <div className="instruction-num">
             2.
           </div>
           <div className="instruction instruction-text">

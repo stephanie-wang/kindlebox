@@ -1,4 +1,5 @@
 import logging
+import time
 import os
 
 from dropbox.client import DropboxClient
@@ -135,3 +136,13 @@ class RewriteKindleNamesCommand(Command):
         for row in KindleName.query.all():
             row.kindle_name = row.kindle_name + '@kindle.com'
         db.session.commit()
+
+
+class SendReactivateEmailsCommand(Command):
+    def run(self):
+        emails = set(row[0] for row in db.session.query(User.email).filter(User.id < 500).all())
+        with open('app/static/html/bookdrop_reactivate.html') as f:
+            html = f.read()
+            for email in emails:
+                print emailer.send_mail('mail@mail.getbookdrop.com', ['mail@mail.getbookdrop.com'], subject='Bookdrop relaunch', html=html, bcc=[email])
+                time.sleep(0.1)
