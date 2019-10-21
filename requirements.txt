@@ -9,7 +9,7 @@ Mako==1.0.0
 MarkupSafe==0.23
 SQLAlchemy==0.9.4
 WTForms==2.0.1
-Werkzeug==0.9.6
+Werkzeug==0.15.3
 alembic==0.6.5
 amqp==1.4.6
 analytics-python==1.0.3
