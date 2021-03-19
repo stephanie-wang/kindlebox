@@ -4,7 +4,7 @@ Flask-Mobility==0.1.1
 Flask-SQLAlchemy==1.0
 Flask-Script==2.0.5
 Flask-WTF==0.10.2
-Jinja2==2.7.3
+Jinja2==2.11.3
 Mako==1.0.0
 MarkupSafe==0.23
 SQLAlchemy==0.9.4
