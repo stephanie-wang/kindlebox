@@ -35,6 +35,6 @@ six==1.10.0
 smtpapi==0.2.0
 stripe==1.21.0
 subprocess32==3.2.7
-urllib3==1.16
+urllib3==1.26.5
 validate-email==1.2
 wsgiref==0.1.2
